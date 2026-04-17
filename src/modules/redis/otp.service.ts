@@ -1,11 +1,11 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { createClient } from 'redis';
 
 @Injectable()
-export class OtpService {
+export class OtpService implements OnModuleInit {
   private redisClient;
   private readonly otpExpiry: number;
   private readonly maxTries: number;
@@ -15,16 +15,15 @@ export class OtpService {
     this.otpExpiry = parseInt(this.configService.get('OTP_EXPIRY_MINUTES') || '10') * 60;
     this.maxTries = parseInt(this.configService.get('OTP_MAX_ATTEMPTS') || '5');
     this.otpLen = parseInt(this.configService.get('OTP_LENGTH') || '6');
-
-    this.initRedis();
   }
 
-  private async initRedis() {
+  async onModuleInit() {
     this.redisClient = createClient({
       url: this.configService.get('REDIS_URL') || 'redis://localhost:6379',
     });
     this.redisClient.on('error', (err) => console.error('Redis Client Error', err));
     await this.redisClient.connect();
+    console.log('✅ Redis connected successfully');
   }
 
   private generateOTP(): string {
