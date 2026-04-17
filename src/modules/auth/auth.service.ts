@@ -110,6 +110,24 @@ export class AuthService {
     return { message: 'Password reset successful' };
   }
 
+  async requestLoginOTP(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    const { otp } = await this.otpService.createOTP('login_otp', user.email);
+    await this.mailService.sendLoginOTP(user.email, user.fullName, otp);
+
+    return { message: 'Login code sent to your email' };
+  }
+
+  async loginViaOTP(email: string, otp: string) {
+    await this.otpService.verifyOTP('login_otp', email, otp);
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.login(user);
+  }
+
   async refreshTokens(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {

@@ -46,6 +46,16 @@ export class AuthController {
     return this.authService.resetPassword(email, otp, newPass);
   }
 
+  @Post('request-login-otp')
+  async requestLoginOTP(@Body('email') email: string) {
+    return this.authService.requestLoginOTP(email);
+  }
+
+  @Post('login-otp')
+  async loginViaOTP(@Body('email') email: string, @Body('otp') otp: string) {
+    return this.authService.loginViaOTP(email, otp);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getProfile(@Request() req) {
