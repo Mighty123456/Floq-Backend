@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+logs/
+*.log
+.env
+.env.local
+.env.production
+uploads/
+tmp/
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.tgz
