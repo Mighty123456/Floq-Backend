@@ -47,6 +47,9 @@ export class User {
 
   @Prop({ default: Date.now })
   lastSeenAt: Date;
+
+  @Prop({ default: [], type: [String] })
+  fcmTokens: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

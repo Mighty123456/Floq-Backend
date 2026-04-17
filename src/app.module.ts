@@ -5,6 +5,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { MailModule } from './modules/mail/mail.module';
 import { RedisModule } from './modules/redis/redis.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -25,6 +27,8 @@ import { AppService } from './app.service';
     UsersModule,
     MailModule,
     RedisModule,
+    PostsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
