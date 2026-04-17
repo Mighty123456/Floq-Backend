@@ -33,8 +33,12 @@ export class MailService {
             <tr><td height="4" style="background:linear-gradient(90deg, #3B82F6, #60A5FA, #3B82F6);"></td></tr>
             <tr>
               <td style="padding:40px 40px 24px;text-align:center;">
-                <div style="display:inline-block;padding:10px 20px;background:rgba(59, 130, 246, 0.1);border-radius:14px;border:1px solid rgba(59, 130, 246, 0.2);">
-                  <span style="font-size:28px;font-weight:900;color:#FFFFFF;letter-spacing:-0.5px;display:block;">FLOQ</span>
+                <div style="display:inline-block;padding:20px;background:rgba(59, 130, 246, 0.05);border-radius:22px;border:1px solid rgba(59, 130, 246, 0.15);position:relative;">
+                  <!-- Styled Logo Icon -->
+                  <div style="width:60px;height:60px;background:linear-gradient(135deg, #3B82F6, #2563EB);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow: 0 10px 20px rgba(59,130,246,0.3);">
+                    <span style="color:white;font-size:38px;font-weight:900;line-height:60px;font-family:Arial,sans-serif;margin-top:-2px;">F</span>
+                  </div>
+                  <div style="margin-top:16px;font-size:22px;font-weight:900;color:#FFFFFF;letter-spacing:-0.5px;text-transform:uppercase;">FLOQ</div>
                 </div>
               </td>
             </tr>

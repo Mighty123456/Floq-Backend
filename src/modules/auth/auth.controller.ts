@@ -1,10 +1,14 @@
-import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, NotFoundException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard, JwtAuthGuard } from '../../common/guards/auth.guard';
+import { UsersService } from '../users/users.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private usersService: UsersService,
+  ) {}
 
   @Post('register')
   async register(@Body() registerDto: any) {
@@ -58,7 +62,12 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  getProfile(@Request() req) {
-    return req.user;
+  async getProfile(@Request() req) {
+    const user = await this.usersService.findById(req.user.id);
+    if (!user) throw new NotFoundException('User not found');
+    const sanitized = user.toObject();
+    delete sanitized.password;
+    delete sanitized.refreshTokens;
+    return sanitized;
   }
 }
