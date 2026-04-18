@@ -6,7 +6,11 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
+let cachedHandler: any;
+
 async function bootstrap() {
+  if (cachedHandler) return cachedHandler;
+
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalInterceptors(new TransformInterceptor());
@@ -18,7 +22,7 @@ async function bootstrap() {
 
   // Enable CORS for Flutter interaction
   app.enableCors({
-    origin: true, // In production, replace with specific domains
+    origin: true,
     credentials: true,
   });
 
@@ -29,8 +33,33 @@ async function bootstrap() {
     transform: true,
   }));
 
-  const port = process.env.PORT || 3000;
-  await app.listen(port, '0.0.0.0');
-  console.log(`🚀 Floq Backend running on: http://0.0.0.0:${port}`);
+  await app.init();
+  cachedHandler = app.getHttpAdapter().getInstance();
+  return cachedHandler;
 }
-bootstrap();
+
+// Local development
+if (process.env.NODE_ENV !== 'production') {
+  const startLocal = async () => {
+    const app = await NestFactory.create(AppModule);
+    app.useGlobalInterceptors(new TransformInterceptor());
+    app.use(helmet());
+    app.use(compression());
+    app.use(cookieParser());
+    app.enableCors({ origin: true, credentials: true });
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+
+    const port = process.env.PORT || 3000;
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Floq Backend running on local: http://localhost:${port}`);
+  };
+  startLocal();
+}
+
+// Export the handler for serverless environments (Vercel)
+export default async (req: any, res: any) => {
+  const handler = await bootstrap();
+  handler(req, res);
+};
+
+
