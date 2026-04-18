@@ -61,7 +61,7 @@ export class PostsService {
     };
 
     return this.postModel
-      .find(query)
+      .find(query as any)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

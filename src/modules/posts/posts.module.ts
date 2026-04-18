@@ -5,6 +5,7 @@ import { PostsService } from './posts.service';
 import { Post, PostSchema } from '../../schemas/post.schema';
 import { User, UserSchema } from '../../schemas/user.schema';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { ConnectionsModule } from '../connections/connections.module';
 
 @Module({
   imports: [
