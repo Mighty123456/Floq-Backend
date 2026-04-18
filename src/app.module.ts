@@ -10,6 +10,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ConnectionsModule } from './modules/connections/connections.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AppService } from './app.service';
     PostsModule,
     NotificationsModule,
     ConnectionsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
