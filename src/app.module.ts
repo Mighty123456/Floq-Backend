@@ -16,25 +16,20 @@ import { ChatModule } from './modules/chat/chat.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // In production/Vercel, ConfigModule will ignore envFilePath and use system environment
       envFilePath: '.env', 
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const uri = configService.get<string>('MONGODB_URI');
+        // We try to get from Env first, fallback to your specific Atlas Cluster URI
+        const uri = configService.get<string>('MONGODB_URI') || 
+                   'mongodb://ansh132002:piaMEdyq40de4Gtk@alphacluster-shard-00-00.h1fav.mongodb.net:27017,alphacluster-shard-00-01.h1fav.mongodb.net:27017,alphacluster-shard-00-02.h1fav.mongodb.net:27017/Floq?ssl=true&authSource=admin&retryWrites=true&w=majority';
         
-        if (!uri) {
-          // If no URI is provided, we fail explicitly with a clear message
-          // This prevents falling back to localhost 27017 which always fails in Vercel/Render
-          console.error('❌ MONGODB_URI is missing from ConfigService!');
-          throw new Error('MONGODB_URI is not defined. Please set it in your environment variables.');
-        }
-
+        console.log(`📡 Connecting to MongoDB... (Mode: ${configService.get('MONGODB_URI') ? 'ENV' : 'HARDCODED_FALLBACK'})`);
+        
         return {
           uri: uri,
-          // Added connection options for better stability with Atlas
-          connectTimeoutMS: 15000,
+          connectTimeoutMS: 20000,
           socketTimeoutMS: 45000,
         };
       },

@@ -19,7 +19,7 @@ export class OtpService implements OnModuleInit {
 
   async onModuleInit() {
     this.redisClient = createClient({
-      url: this.configService.get('REDIS_URL') || 'redis://localhost:6379',
+      url: this.configService.get('REDIS_URL') || 'rediss://default:gQAAAAAAAUwqAAIncDFlZjljNjc2NjAxZmU0N2RiOTFmZjhhOWUyNjg3N2RiYXAxODUwMzQ@hip-hyena-85034.upstash.io:6379',
     });
     this.redisClient.on('error', (err) => console.error('Redis Client Error', err));
     await this.redisClient.connect();
