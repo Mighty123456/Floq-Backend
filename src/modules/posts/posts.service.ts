@@ -142,4 +142,27 @@ export class PostsService {
     
     return { success: true, data: comments };
   }
+
+  async toggleSave(postId: string, userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    const postIdObj = new Types.ObjectId(postId);
+    const postExists = await this.postModel.exists({ _id: postIdObj });
+    if (!postExists) throw new NotFoundException('Post not found');
+
+    const hasSaved = user['savedPosts'] ? user['savedPosts'].some(id => id.toString() === postId) : false;
+
+    if (hasSaved) {
+      await this.userModel.findByIdAndUpdate(userId, {
+        $pull: { savedPosts: postIdObj },
+      });
+      return { success: true, saved: false };
+    } else {
+      await this.userModel.findByIdAndUpdate(userId, {
+        $addToSet: { savedPosts: postIdObj },
+      });
+      return { success: true, saved: true };
+    }
+  }
 }

@@ -38,28 +38,29 @@ async function bootstrap() {
   return cachedHandler;
 }
 
-// Local development
-if (process.env.NODE_ENV !== 'production') {
-  const startLocal = async () => {
-    const app = await NestFactory.create(AppModule);
-    app.useGlobalInterceptors(new TransformInterceptor());
-    app.use(helmet());
-    app.use(compression());
-    app.use(cookieParser());
-    app.enableCors({ origin: true, credentials: true });
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+// Local & Production Server (for Render/Heroku/DigitalOcean)
+async function startServer() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalInterceptors(new TransformInterceptor());
+  app.use(helmet());
+  app.use(compression());
+  app.use(cookieParser());
+  app.enableCors({ origin: true, credentials: true });
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
-    const port = process.env.PORT || 3000;
-    await app.listen(port, '0.0.0.0');
-    console.log(`🚀 Floq Backend running on local: http://localhost:${port}`);
-  };
-  startLocal();
+  const port = process.env.PORT || 3000;
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Floq Backend running on port: ${port}`);
 }
 
-// Export the handler for serverless environments (Vercel)
-export default async (req: any, res: any) => {
-  const handler = await bootstrap();
-  handler(req, res);
-};
-
-
+// Check if we are in a serverless environment (Vercel) or a regular server (Render)
+if (process.env.VERCEL) {
+  // Export for Vercel
+  module.exports = async (req: any, res: any) => {
+    const handler = await bootstrap();
+    handler(req, res);
+  };
+} else {
+  // Run as regular server for Render
+  startServer();
+}

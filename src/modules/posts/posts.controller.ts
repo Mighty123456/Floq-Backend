@@ -58,4 +58,9 @@ export class PostsController {
   async getUserPosts(@Param('id') id: string) {
     return this.postsService.getUserPosts(id);
   }
+
+  @Post(':id/save')
+  async toggleSave(@Request() req, @Param('id') id: string) {
+    return this.postsService.toggleSave(id, req.user.id);
+  }
 }

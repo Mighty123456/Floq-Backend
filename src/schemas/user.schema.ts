@@ -50,6 +50,9 @@ export class User {
 
   @Prop({ default: [], type: [String] })
   fcmTokens: string[];
+
+  @Prop({ type: [{ type: 'ObjectId', ref: 'Post' }], default: [] })
+  savedPosts: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
