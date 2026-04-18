@@ -21,10 +21,11 @@ export class PostsController {
 
   @Get('feed')
   async getFeed(
+    @Request() req,
     @Query('page') page: string,
     @Query('limit') limit: string,
   ) {
-    return this.postsService.getFeed(page ? parseInt(page, 10) : 1, limit ? parseInt(limit, 10) : 10);
+    return this.postsService.getFeed(req.user.id, page ? parseInt(page, 10) : 1, limit ? parseInt(limit, 10) : 10);
   }
 
   @Get('user/:id')

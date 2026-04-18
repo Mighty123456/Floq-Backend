@@ -13,6 +13,7 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
       { name: User.name, schema: UserSchema },
     ]),
     CloudinaryModule,
+    ConnectionsModule,
   ],
   controllers: [PostsController],
   providers: [PostsService],

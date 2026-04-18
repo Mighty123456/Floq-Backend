@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { ConnectionsService } from '../connections/connections.service';
 import { Types } from 'mongoose';
 import 'multer';
 
@@ -13,6 +14,7 @@ export class PostsService {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private cloudinaryService: CloudinaryService,
+    private connectionsService: ConnectionsService,
   ) {}
 
   async createPost(userId: string, caption: string, files: Express.Multer.File[]) {
@@ -46,11 +48,20 @@ export class PostsService {
     return savedPost.populate('user', 'fullName username avatar');
   }
 
-  async getFeed(page: number = 1, limit: number = 10) {
+  async getFeed(requesterId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
     
+    // Get the list of people the requester follows
+    const followingIds = await this.connectionsService.getFollowingIds(requesterId);
+    
+    // Filter posts from following users + own posts
+    const query = {
+      user: { $in: [...followingIds, new Types.ObjectId(requesterId)] },
+      isActive: true,
+    };
+
     return this.postModel
-      .find({ isActive: true })
+      .find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

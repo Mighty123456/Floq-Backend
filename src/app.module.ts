@@ -7,6 +7,7 @@ import { MailModule } from './modules/mail/mail.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ConnectionsModule } from './modules/connections/connections.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -29,6 +30,7 @@ import { AppService } from './app.service';
     RedisModule,
     PostsModule,
     NotificationsModule,
+    ConnectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
