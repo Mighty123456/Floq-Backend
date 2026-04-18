@@ -16,13 +16,28 @@ import { ChatModule } from './modules/chat/chat.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      // In production/Vercel, ConfigModule will ignore envFilePath and use system environment
+      envFilePath: '.env', 
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI') || 'mongodb://localhost:27017/floq',
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const uri = configService.get<string>('MONGODB_URI');
+        
+        if (!uri) {
+          // If no URI is provided, we fail explicitly with a clear message
+          // This prevents falling back to localhost 27017 which always fails in Vercel/Render
+          console.error('❌ MONGODB_URI is missing from ConfigService!');
+          throw new Error('MONGODB_URI is not defined. Please set it in your environment variables.');
+        }
+
+        return {
+          uri: uri,
+          // Added connection options for better stability with Atlas
+          connectTimeoutMS: 15000,
+          socketTimeoutMS: 45000,
+        };
+      },
       inject: [ConfigService],
     }),
     AuthModule,

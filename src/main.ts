@@ -1,3 +1,7 @@
+import * as dotenv from 'dotenv';
+// Load environment variables immediately before anything else
+dotenv.config();
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
@@ -50,10 +54,12 @@ async function startServer() {
 
   const port = process.env.PORT || 3000;
   
-  console.log('🔍 Checking Environment...');
-  console.log(`📡 MONGODB_URI exists: ${!!process.env.MONGODB_URI}`);
-  if (process.env.MONGODB_URI) {
-     console.log(`🔗 Protocol: ${process.env.MONGODB_URI.split(':')[0]}`);
+  console.log('🔍 ENVIRONMENT CHECK...');
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error('❌ FATAL: MONGODB_URI is not defined in the environment!');
+  } else {
+    console.log(`📡 MONGODB_URI detected (Protocol: ${uri.split(':')[0]})`);
   }
 
   await app.listen(port, '0.0.0.0');
