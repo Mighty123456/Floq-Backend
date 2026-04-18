@@ -1,4 +1,7 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, UseInterceptors, UploadedFiles, Request } from '@nestjs/common';
+import { 
+  Controller, Post, Get, Body, Param, UseGuards, 
+  Request, UploadedFiles, UseInterceptors, Query 
+} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../../common/guards/auth.guard';
@@ -22,10 +25,33 @@ export class PostsController {
   @Get('feed')
   async getFeed(
     @Request() req,
-    @Query('page') page: string,
-    @Query('limit') limit: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
   ) {
-    return this.postsService.getFeed(req.user.id, page ? parseInt(page, 10) : 1, limit ? parseInt(limit, 10) : 10);
+    return this.postsService.getFeed(req.user.id, parseInt(page, 10), parseInt(limit, 10));
+  }
+
+  @Post(':id/like')
+  async toggleLike(@Request() req, @Param('id') id: string) {
+    return this.postsService.toggleLike(id, req.user.id);
+  }
+
+  @Post(':id/comment')
+  async addComment(
+    @Request() req,
+    @Param('id') id: string,
+    @Body('text') text: string,
+  ) {
+    return this.postsService.addComment(id, req.user.id, text);
+  }
+
+  @Get(':id/comments')
+  async getComments(
+    @Param('id') id: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    return this.postsService.getComments(id, parseInt(page, 10), parseInt(limit, 10));
   }
 
   @Get('user/:id')
