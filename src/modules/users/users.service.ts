@@ -20,7 +20,16 @@ export class UsersService {
     return user.save();
   }
 
-  async update(id: string, updateData: Partial<User>): Promise<UserDocument | null> {
+  async update(id: string, updateData: any) {
     return this.userModel.findByIdAndUpdate(id, updateData, { new: true });
+  }
+
+  async findAll(excludeUserId: string) {
+    const users = await this.userModel.find({ 
+      _id: { $ne: new Types.ObjectId(excludeUserId) },
+      isActive: true,
+    }).select('fullName username avatar followersCount followingCount postsCount');
+    
+    return { success: true, data: users };
   }
 }

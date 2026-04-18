@@ -26,6 +26,12 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('all')
+  async getAllUsers(@Request() req) {
+    return this.usersService.findAll(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Patch('me')
   async updateProfile(@Request() req, @Body() updateData: any) {
     // Basic profile update

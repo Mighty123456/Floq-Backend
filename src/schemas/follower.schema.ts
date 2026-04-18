@@ -10,6 +10,9 @@ export class Follower {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   following: Types.ObjectId; // The person being followed
+
+  @Prop({ type: String, enum: ['pending', 'accepted'], default: 'accepted' })
+  status: string;
 }
 
 export const FollowerSchema = SchemaFactory.createForClass(Follower);
