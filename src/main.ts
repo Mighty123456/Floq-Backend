@@ -49,6 +49,13 @@ async function startServer() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
   const port = process.env.PORT || 3000;
+  
+  console.log('🔍 Checking Environment...');
+  console.log(`📡 MONGODB_URI exists: ${!!process.env.MONGODB_URI}`);
+  if (process.env.MONGODB_URI) {
+     console.log(`🔗 Protocol: ${process.env.MONGODB_URI.split(':')[0]}`);
+  }
+
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Floq Backend running on port: ${port}`);
 }
@@ -61,6 +68,6 @@ if (process.env.VERCEL) {
     handler(req, res);
   };
 } else {
-  // Run as regular server for Render
+  // Run as regular server for Render/Local
   startServer();
 }
