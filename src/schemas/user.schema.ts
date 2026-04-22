@@ -12,11 +12,20 @@ export class User {
   @Prop({ unique: true, sparse: true, lowercase: true, trim: true })
   username: string;
 
-  @Prop({ required: true, unique: true, lowercase: true, trim: true })
+  @Prop({ unique: true, sparse: true, lowercase: true, trim: true })
   email: string;
+
+  @Prop({ unique: true, sparse: true, trim: true })
+  phoneNumber?: string;
+
+  @Prop({ default: false })
+  isPhoneVerified: boolean;
 
   @Prop({ select: false })
   password?: string;
+
+  @Prop({ unique: true, sparse: true })
+  googleId?: string;
 
   @Prop({ default: 'user', enum: ['user', 'admin', 'moderator'] })
   role: string;

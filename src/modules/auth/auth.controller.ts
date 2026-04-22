@@ -35,26 +35,29 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('verify-otp')
   async verifyOTP(@Body() verifyOtpDto: VerifyOtpDto) {
-    return this.authService.verifyOTP(verifyOtpDto.email, verifyOtpDto.otp);
+    return this.authService.verifyOTP(
+      { email: verifyOtpDto.email, phoneNumber: verifyOtpDto.phoneNumber }, 
+      verifyOtpDto.otp
+    );
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('resend-otp')
-  async resendOTP(@Body('email') email: string) {
-    return this.authService.resendOTP(email);
+  async resendOTP(@Body('email') email: string, @Body('phoneNumber') phoneNumber?: string) {
+    return this.authService.resendOTP(email, phoneNumber);
   }
 
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(forgotPasswordDto.email);
+    return this.authService.forgotPassword(forgotPasswordDto.email, forgotPasswordDto.phoneNumber);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(
-      resetPasswordDto.email, 
+      { email: resetPasswordDto.email, phoneNumber: resetPasswordDto.phoneNumber }, 
       resetPasswordDto.otp, 
       resetPasswordDto.newPassword
     );
@@ -62,14 +65,23 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('request-login-otp')
-  async requestLoginOTP(@Body('email') email: string) {
-    return this.authService.requestLoginOTP(email);
+  async requestLoginOTP(@Body('email') email: string, @Body('phoneNumber') phoneNumber?: string) {
+    return this.authService.requestLoginOTP(email, phoneNumber);
   }
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login-otp')
   async loginViaOTP(@Body() verifyOtpDto: VerifyOtpDto) {
-    return this.authService.loginViaOTP(verifyOtpDto.email, verifyOtpDto.otp);
+    return this.authService.loginViaOTP(
+      { email: verifyOtpDto.email, phoneNumber: verifyOtpDto.phoneNumber }, 
+      verifyOtpDto.otp
+    );
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('google')
+  async googleSignIn(@Body('idToken') idToken: string) {
+    return this.authService.googleSignIn(idToken);
   }
 
   @UseGuards(JwtAuthGuard)

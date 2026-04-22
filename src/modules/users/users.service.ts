@@ -25,6 +25,10 @@ export class UsersService {
     return this.userModel.findOne({ email: email.toLowerCase() }).select('+password +refreshTokens');
   }
 
+  async findByPhoneNumber(phoneNumber: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ phoneNumber }).select('+password +refreshTokens');
+  }
+
   async findById(id: string): Promise<UserDocument | null> {
     return this.userModel.findById(id).select('+refreshTokens +fcmTokens');
   }

@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
 
 export class LoginDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
@@ -14,8 +14,12 @@ export class LoginDto {
 
 export class VerifyOtpDto {
   @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  phoneNumber?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -26,14 +30,22 @@ export class VerifyOtpDto {
 
 export class ForgotPasswordDto {
   @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  phoneNumber?: string;
 }
 
 export class ResetPasswordDto {
   @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  phoneNumber?: string;
 
   @IsString()
   @IsNotEmpty()

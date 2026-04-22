@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { OtpService } from '../redis/otp.service';
@@ -6,6 +6,7 @@ import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { UserDocument } from '../../schemas/user.schema';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
@@ -16,12 +17,9 @@ export class AuthService {
     private mailService: MailService,
   ) {}
 
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
-    if (user && user.password && (await bcrypt.compare(pass, user.password))) {
-      const { password, ...result } = user.toObject();
-      return result;
-    }
+  private async findUserByIdentifier(email?: string, phoneNumber?: string) {
+    if (email) return this.usersService.findByEmail(email);
+    if (phoneNumber) return this.usersService.findByPhoneNumber(phoneNumber);
     return null;
   }
 
@@ -37,10 +35,17 @@ export class AuthService {
     const hashedToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const dbUser = await this.usersService.findById(user._id);
     if (dbUser) {
-        if (!dbUser.isEmailVerified) {
-             const { otp } = await this.otpService.createOTP('email_verify', dbUser.email);
-             await this.mailService.sendVerificationOTP(dbUser.email, dbUser.fullName, otp);
-             throw new ForbiddenException({ message: 'Email not verified', needsVerification: true, email: dbUser.email });
+        if (!dbUser.isEmailVerified && !dbUser.isPhoneVerified) {
+             const identifier = dbUser.email || dbUser.phoneNumber;
+             const { otp } = await this.otpService.createOTP('verify', identifier!);
+             if (dbUser.email) await this.mailService.sendVerificationOTP(dbUser.email, dbUser.fullName, otp);
+             // TODO: Add SmsService.sendOTP(dbUser.phoneNumber, otp)
+             throw new ForbiddenException({ 
+               message: 'Account not verified', 
+               needsVerification: true, 
+               email: dbUser.email,
+               phoneNumber: dbUser.phoneNumber 
+             });
         }
         dbUser.refreshTokens = [...(dbUser.refreshTokens || []).slice(-4), hashedToken];
         await dbUser.save();
@@ -54,54 +59,77 @@ export class AuthService {
   }
 
   async register(userData: any) {
-    const existing = await this.usersService.findByEmail(userData.email);
-    if (existing) throw new ConflictException('Email already exists');
+    if (userData.email) {
+      const existing = await this.usersService.findByEmail(userData.email);
+      if (existing) throw new ConflictException('Email already exists');
+    }
+    if (userData.phoneNumber) {
+      const existing = await this.usersService.findByPhoneNumber(userData.phoneNumber);
+      if (existing) throw new ConflictException('Phone number already exists');
+    }
 
     const user = await this.usersService.create(userData);
-    const { otp } = await this.otpService.createOTP('email_verify', user.email);
-    await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
+    const identifier = user.email || user.phoneNumber;
+    const { otp } = await this.otpService.createOTP('verify', identifier!);
+    
+    if (user.email) await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
+    // TODO: Add SmsService.sendOTP(user.phoneNumber, otp)
 
     return {
         message: 'Registration successful. Verification code sent.',
         userId: user._id,
         email: user.email,
+        phoneNumber: user.phoneNumber,
     };
   }
 
-  async verifyOTP(email: string, otp: string) {
-    await this.otpService.verifyOTP('email_verify', email, otp);
-    const user = await this.usersService.findByEmail(email);
+  async verifyOTP(identifier: { email?: string; phoneNumber?: string }, otp: string) {
+    const id = identifier.email || identifier.phoneNumber;
+    if (!id) throw new BadRequestException('No identifier provided');
+
+    await this.otpService.verifyOTP('verify', id, otp);
+    const user = await this.findUserByIdentifier(identifier.email, identifier.phoneNumber);
     if (!user) throw new NotFoundException('User not found');
 
-    user.isEmailVerified = true;
+    if (identifier.email) user.isEmailVerified = true;
+    if (identifier.phoneNumber) user.isPhoneVerified = true;
     await user.save();
 
     return this.login(user);
   }
 
-  async resendOTP(email: string) {
-    const user = await this.usersService.findByEmail(email);
+  async resendOTP(email?: string, phoneNumber?: string) {
+    const user = await this.findUserByIdentifier(email, phoneNumber);
     if (!user) throw new NotFoundException('User not found');
 
-    const { otp } = await this.otpService.createOTP('email_verify', user.email);
-    await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
+    const identifier = user.email || user.phoneNumber;
+    const { otp } = await this.otpService.createOTP('verify', identifier!);
+    
+    if (user.email) await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
+    // TODO: Add SmsService.sendOTP(user.phoneNumber, otp)
 
     return { message: 'OTP resent successfully' };
   }
 
-  async forgotPassword(email: string) {
-    const user = await this.usersService.findByEmail(email);
+  async forgotPassword(email?: string, phoneNumber?: string) {
+    const user = await this.findUserByIdentifier(email, phoneNumber);
     if (!user) throw new NotFoundException('User not found');
 
-    const { otp } = await this.otpService.createOTP('password_reset', user.email);
-    await this.mailService.sendPasswordResetOTP(user.email, user.fullName, otp);
+    const identifier = user.email || user.phoneNumber;
+    const { otp } = await this.otpService.createOTP('password_reset', identifier!);
+    
+    if (user.email) await this.mailService.sendPasswordResetOTP(user.email, user.fullName, otp);
+    // TODO: Add SmsService.sendOTP(user.phoneNumber, otp)
 
     return { message: 'Password reset code sent' };
   }
 
-  async resetPassword(email: string, otp: string, newPass: string) {
-    await this.otpService.verifyOTP('password_reset', email, otp);
-    const user = await this.usersService.findByEmail(email);
+  async resetPassword(identifier: { email?: string; phoneNumber?: string }, otp: string, newPass: string) {
+    const id = identifier.email || identifier.phoneNumber;
+    if (!id) throw new BadRequestException('No identifier provided');
+
+    await this.otpService.verifyOTP('password_reset', id, otp);
+    const user = await this.findUserByIdentifier(identifier.email, identifier.phoneNumber);
     if (!user) throw new NotFoundException('User not found');
 
     user.password = newPass;
@@ -110,20 +138,64 @@ export class AuthService {
     return { message: 'Password reset successful' };
   }
 
-  async requestLoginOTP(email: string) {
-    const user = await this.usersService.findByEmail(email);
+  async requestLoginOTP(email?: string, phoneNumber?: string) {
+    const user = await this.findUserByIdentifier(email, phoneNumber);
     if (!user) throw new NotFoundException('User not found');
 
-    const { otp } = await this.otpService.createOTP('login_otp', user.email);
-    await this.mailService.sendLoginOTP(user.email, user.fullName, otp);
+    const identifier = user.email || user.phoneNumber;
+    const { otp } = await this.otpService.createOTP('login_otp', identifier!);
+    
+    if (user.email) await this.mailService.sendLoginOTP(user.email, user.fullName, otp);
+    // TODO: Add SmsService.sendOTP(user.phoneNumber, otp)
 
-    return { message: 'Login code sent to your email' };
+    return { message: 'Login code sent' };
   }
 
-  async loginViaOTP(email: string, otp: string) {
-    await this.otpService.verifyOTP('login_otp', email, otp);
-    const user = await this.usersService.findByEmail(email);
+  async loginViaOTP(identifier: { email?: string; phoneNumber?: string }, otp: string) {
+    const id = identifier.email || identifier.phoneNumber;
+    if (!id) throw new BadRequestException('No identifier provided');
+
+    await this.otpService.verifyOTP('login_otp', id, otp);
+    const user = await this.findUserByIdentifier(identifier.email, identifier.phoneNumber);
     if (!user) throw new NotFoundException('User not found');
+
+    return this.login(user);
+  }
+
+  async googleSignIn(idToken: string) {
+    // Verify the Google ID token using google-auth-library
+    const client = new OAuth2Client();
+    let payload: any;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID, // Web client ID from Google Cloud Console
+      });
+      payload = ticket.getPayload();
+    } catch (e) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    const { email, name, sub: googleId, picture } = payload;
+    if (!email) throw new BadRequestException('Google account has no email');
+
+    // Find or create user
+    let user = await this.usersService.findByEmail(email);
+    if (!user) {
+      user = await this.usersService.create({
+        fullName: name,
+        email,
+        googleId,
+        avatar: picture,
+        isEmailVerified: true, // Google already verified the email
+        password: crypto.randomBytes(32).toString('hex'), // random password, not used
+      });
+    } else if (!user.googleId) {
+      // Link Google to existing account
+      user.googleId = googleId;
+      user.isEmailVerified = true;
+      await user.save();
+    }
 
     return this.login(user);
   }
