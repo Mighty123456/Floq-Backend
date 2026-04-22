@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import * as path from 'path';
 
 @Injectable()
 export class MailService {
@@ -35,8 +36,8 @@ export class MailService {
               <td style="padding:40px 40px 24px;text-align:center;">
                 <div style="display:inline-block;padding:20px;background:rgba(59, 130, 246, 0.05);border-radius:22px;border:1px solid rgba(59, 130, 246, 0.15);position:relative;">
                   <!-- Styled Logo Icon -->
-                  <div style="width:60px;height:60px;background:linear-gradient(135deg, #3B82F6, #2563EB);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow: 0 10px 20px rgba(59,130,246,0.3);">
-                    <span style="color:white;font-size:38px;font-weight:900;line-height:60px;font-family:Arial,sans-serif;margin-top:-2px;">F</span>
+                  <div style="width:80px;height:80px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow: 0 10px 20px rgba(59,130,246,0.3);overflow:hidden;">
+                    <img src="cid:floq_logo" alt="Floq Logo" style="width:100%;height:100%;object-fit:cover;display:block;" />
                   </div>
                   <div style="margin-top:16px;font-size:22px;font-weight:900;color:#FFFFFF;letter-spacing:-0.5px;text-transform:uppercase;">FLOQ</div>
                 </div>
@@ -127,6 +128,13 @@ export class MailService {
         to,
         subject,
         html,
+        attachments: [
+          {
+            filename: 'icon.png',
+            path: path.join(process.cwd(), 'assets', 'icon.png'),
+            cid: 'floq_logo',
+          },
+        ],
       });
     } catch (error) {
       console.error('Email Error:', error);

@@ -149,6 +149,27 @@ export class AuthService {
     }
   }
 
+  async changePassword(userId: string, newPass: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    user.password = newPass;
+    await user.save();
+
+    return { message: 'Password changed successfully' };
+  }
+
+  async logout(userId: string, refreshToken: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) return { success: true };
+
+    const hashedToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    user.refreshTokens = user.refreshTokens.filter(token => token !== hashedToken);
+    await user.save();
+
+    return { success: true };
+  }
+
   private sanitizeUser(user: any) {
     const { password, refreshTokens, ...sanitized } = user;
     return sanitized;

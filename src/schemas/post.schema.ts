@@ -24,8 +24,23 @@ export class Post {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   likes: Types.ObjectId[];
 
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  taggedUsers: Types.ObjectId[];
+
+  @Prop({ type: Types.ObjectId, ref: 'Post', default: null })
+  repostOf: Types.ObjectId;
+
+  @Prop({ default: 0 })
+  repostsCount: number;
+
+  @Prop({ type: [String], default: [] })
+  hashtags: string[];
+
   @Prop({ default: true })
   isActive: boolean;
+
+  @Prop({ default: false })
+  isPinned: boolean;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

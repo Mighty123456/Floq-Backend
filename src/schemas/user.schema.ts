@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 
 export type UserDocument = User & Document;
@@ -52,7 +52,51 @@ export class User {
   fcmTokens: string[];
 
   @Prop({ type: [{ type: 'ObjectId', ref: 'Post' }], default: [] })
-  savedPosts: string[];
+  savedPosts: Types.ObjectId[];
+
+  @Prop({ type: [{ type: 'ObjectId', ref: 'User' }], default: [] })
+  blockedUsers: Types.ObjectId[];
+
+  @Prop({ type: [{ type: 'ObjectId', ref: 'User' }], default: [] })
+  spammedUsers: Types.ObjectId[];
+
+
+  @Prop({ default: false })
+  isBanned: boolean;
+
+  @Prop({ default: '', trim: true })
+  banReason: string;
+
+  @Prop({ default: Date.now })
+  lastUsernameChange: Date;
+
+  @Prop({ default: '', trim: true })
+  bio: string;
+
+  @Prop({ default: '', trim: true })
+  website: string;
+
+  @Prop({ default: '', trim: true })
+  location: string;
+
+  @Prop({ default: false })
+  isPrivate: boolean;
+
+  @Prop({
+    type: Object,
+    default: {
+      isDarkTheme: true,
+      isNotificationsEnabled: true,
+      showOnlineStatus: true,
+      allowFriendRequests: true,
+    },
+  })
+  settings: {
+    isDarkTheme: boolean;
+    isNotificationsEnabled: boolean;
+    showOnlineStatus: boolean;
+    allowFriendRequests: boolean;
+  };
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

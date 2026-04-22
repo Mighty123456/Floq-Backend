@@ -1,15 +1,23 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Notification, NotificationDocument } from '../../schemas/notification.schema';
 import * as admin from 'firebase-admin';
-import * as path from 'path';
+
+import { NotificationGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationService implements OnModuleInit {
+  constructor(
+    @InjectModel(Notification.name) private notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
+  ) {}
+
   onModuleInit() {
-    // Note: You must provide a serviceAccountKey.json in the root or set FIREBASE_CONFIG env
     try {
       if (admin.apps.length === 0) {
         admin.initializeApp({
-          credential: admin.credential.applicationDefault(), // Or pass specific cert
+          credential: admin.credential.applicationDefault(),
         });
         console.log('Firebase Admin Initialized');
       }
@@ -18,15 +26,85 @@ export class NotificationService implements OnModuleInit {
     }
   }
 
+  async createNotification(data: {
+    recipient: string;
+    sender: string;
+    type: string;
+    post?: string;
+    content?: string;
+  }) {
+    const notification = new this.notificationModel({
+      recipient: new Types.ObjectId(data.recipient),
+      sender: new Types.ObjectId(data.sender),
+      type: data.type,
+      post: data.post ? new Types.ObjectId(data.post) : undefined,
+      content: data.content || '',
+    });
+    const saved = await notification.save();
+    const populated = await saved.populate('sender', 'fullName username avatar');
+    
+    // Emit via WebSocket for real-time in-app delivery
+    this.notificationGateway.emitNotification(data.recipient, populated);
+
+    return populated;
+  }
+
+  async getNotifications(userId: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+    const query = { recipient: new Types.ObjectId(userId) };
+    
+    const [notifications, total] = await Promise.all([
+      this.notificationModel
+        .find(query as any)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('sender', 'fullName username avatar')
+        .populate('post', 'media')
+        .exec(),
+      this.notificationModel.countDocuments(query as any)
+    ]);
+    
+    return { 
+      success: true, 
+      data: notifications,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  async markAsRead(userId: string) {
+    return this.notificationModel.updateMany(
+      { recipient: new Types.ObjectId(userId), isRead: false },
+      { isRead: true },
+    );
+  }
+
+  async markOneAsRead(userId: string, notificationId: string) {
+    return this.notificationModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(notificationId), recipient: new Types.ObjectId(userId) },
+      { isRead: true },
+      { new: true }
+    );
+  }
+
+  async getUnreadCount(userId: string) {
+    const count = await this.notificationModel.countDocuments({
+      recipient: new Types.ObjectId(userId),
+      isRead: false,
+    });
+    return { success: true, count };
+  }
+
   async sendToDevices(tokens: string[], title: string, body: string, data?: any) {
     if (!tokens || tokens.length === 0) return;
 
     const message: admin.messaging.MulticastMessage = {
       tokens,
-      notification: {
-        title,
-        body,
-      },
+      notification: { title, body },
       data: data || {},
       android: {
         priority: 'high',
@@ -40,13 +118,21 @@ export class NotificationService implements OnModuleInit {
     try {
       const response = await admin.messaging().sendEachForMulticast(message);
       console.log(`${response.successCount} messages were sent successfully`);
-      
-      // Handle cleanup of invalid tokens if needed
-      if (response.failureCount > 0) {
-        // You could find invalid tokens and remove them from DB here
-      }
     } catch (error) {
       console.error('Error sending messages:', error);
     }
+  }
+
+  async deleteNotification(userId: string, notificationId: string) {
+    return this.notificationModel.findOneAndDelete({
+      _id: new Types.ObjectId(notificationId),
+      recipient: new Types.ObjectId(userId),
+    } as any);
+  }
+
+  async clearAll(userId: string) {
+    return this.notificationModel.deleteMany({
+      recipient: new Types.ObjectId(userId),
+    } as any);
   }
 }

@@ -2,6 +2,9 @@ import { Controller, Post, Body, UseGuards, Request, Get, NotFoundException } fr
 import { AuthService } from './auth.service';
 import { LocalAuthGuard, JwtAuthGuard } from '../../common/guards/auth.guard';
 import { UsersService } from '../users/users.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto, VerifyOtpDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './dto/auth.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -10,14 +13,17 @@ export class AuthController {
     private usersService: UsersService,
   ) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
-  async register(@Body() registerDto: any) {
+  async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req) {
+  async login(@Request() req, @Body() loginDto: LoginDto) {
+    // loginDto is mainly for documentation/validation here since LocalAuthGuard handles logic
     return this.authService.login(req.user);
   }
 
@@ -26,38 +32,50 @@ export class AuthController {
     return this.authService.refreshTokens(token);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('verify-otp')
-  async verifyOTP(@Body('email') email: string, @Body('otp') otp: string) {
-    return this.authService.verifyOTP(email, otp);
+  async verifyOTP(@Body() verifyOtpDto: VerifyOtpDto) {
+    return this.authService.verifyOTP(verifyOtpDto.email, verifyOtpDto.otp);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('resend-otp')
   async resendOTP(@Body('email') email: string) {
     return this.authService.resendOTP(email);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('forgot-password')
-  async forgotPassword(@Body('email') email: string) {
-    return this.authService.forgotPassword(email);
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('reset-password')
-  async resetPassword(
-    @Body('email') email: string,
-    @Body('otp') otp: string,
-    @Body('newPassword') newPass: string,
-  ) {
-    return this.authService.resetPassword(email, otp, newPass);
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(
+      resetPasswordDto.email, 
+      resetPasswordDto.otp, 
+      resetPasswordDto.newPassword
+    );
   }
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('request-login-otp')
   async requestLoginOTP(@Body('email') email: string) {
     return this.authService.requestLoginOTP(email);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login-otp')
-  async loginViaOTP(@Body('email') email: string, @Body('otp') otp: string) {
-    return this.authService.loginViaOTP(email, otp);
+  async loginViaOTP(@Body() verifyOtpDto: VerifyOtpDto) {
+    return this.authService.loginViaOTP(verifyOtpDto.email, verifyOtpDto.otp);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, changePasswordDto.newPassword);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -69,5 +87,11 @@ export class AuthController {
     delete sanitized.password;
     delete sanitized.refreshTokens;
     return sanitized;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Request() req, @Body('refreshToken') refreshToken: string) {
+    return this.authService.logout(req.user.id, refreshToken);
   }
 }

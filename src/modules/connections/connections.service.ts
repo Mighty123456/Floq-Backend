@@ -3,12 +3,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Follower, FollowerDocument } from '../../schemas/follower.schema';
 import { User, UserDocument } from '../../schemas/user.schema';
+import { NotificationService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ConnectionsService {
   constructor(
     @InjectModel(Follower.name) private followerModel: Model<FollowerDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private notificationService: NotificationService,
   ) {}
 
   async followUser(followerId: string, followingId: string) {
@@ -19,6 +21,18 @@ export class ConnectionsService {
     const targetUser = await this.userModel.findById(followingId);
     if (!targetUser) {
       throw new NotFoundException('User to follow not found');
+    }
+
+    // Safety: Check if requester is blocked by target OR has blocked the target
+    if (targetUser.blockedUsers?.some(id => id.toString() === followerId)) {
+      throw new BadRequestException('You are blocked by this user');
+    }
+
+    const requester = await this.userModel.findById(followerId);
+    if (!requester) throw new NotFoundException('Requester not found');
+
+    if (requester.blockedUsers?.some(id => id.toString() === followingId)) {
+      throw new BadRequestException('You have blocked this user. Unblock them first.');
     }
 
     // Check if relationship already exists
@@ -37,6 +51,23 @@ export class ConnectionsService {
       following: new Types.ObjectId(followingId),
       status: 'pending',
     }).save();
+
+    // Save to DB
+    await this.notificationService.createNotification({
+      recipient: followingId,
+      sender: followerId,
+      type: 'follow_request',
+    });
+
+    // Send Push
+    if (targetUser.fcmTokens?.length > 0) {
+      this.notificationService.sendToDevices(
+        targetUser.fcmTokens,
+        'New Follow Request! 👋',
+        `${requester.fullName} wants to follow you.`,
+        { requesterId: followerId, type: 'follow_request' }
+      );
+    }
 
     return { success: true, message: 'Follow request sent' };
   }
@@ -59,6 +90,28 @@ export class ConnectionsService {
     // Update counts only when accepted
     await this.userModel.findByIdAndUpdate(followerId, { $inc: { followingCount: 1 } });
     await this.userModel.findByIdAndUpdate(followingId, { $inc: { followersCount: 1 } });
+
+    // Notify the follower that their request was accepted
+    const follower = await this.userModel.findById(followerId);
+    const following = await this.userModel.findById(followingId);
+    if (!follower || !following) throw new NotFoundException('User not found');
+
+    // Save to DB
+    await this.notificationService.createNotification({
+      recipient: followerId,
+      sender: followingId,
+      type: 'follow_accept',
+    });
+
+    // Send Push
+    if (follower.fcmTokens?.length > 0) {
+      this.notificationService.sendToDevices(
+        follower.fcmTokens,
+        'Request Accepted! 🎉',
+        `${following.fullName} accepted your follow request.`,
+        { userId: followingId, type: 'follow_accept' }
+      );
+    }
 
     return { success: true };
   }

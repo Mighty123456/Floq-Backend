@@ -11,8 +11,23 @@ export class Comment {
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })
   post: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Comment', default: null })
+  parentComment: Types.ObjectId;
+
   @Prop({ required: true, trim: true })
   text: string;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  taggedUsers: Types.ObjectId[];
+
+  @Prop({ default: 0 })
+  likesCount: number;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  likes: Types.ObjectId[];
+
+  @Prop({ type: [String], default: [] })
+  hashtags: string[];
 
   @Prop({ default: true })
   isActive: boolean;
