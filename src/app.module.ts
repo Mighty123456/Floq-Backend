@@ -16,6 +16,8 @@ import { ChatModule } from './modules/chat/chat.module';
 import { StoriesModule } from './modules/stories/stories.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
+import { MusicModule } from './modules/music/music.module';
+
 @Module({
   imports: [
     ThrottlerModule.forRoot([{
@@ -52,6 +54,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     ChatModule,
     StoriesModule,
     ReportsModule,
+    MusicModule,
   ],
   controllers: [AppController],
   providers: [

@@ -351,4 +351,14 @@ export class ChatService {
       },
     );
   }
+
+  async getTrendingGroups(limit: number = 10) {
+    const groups = await this.groupModel.aggregate([
+      { $match: { isActive: true } },
+      { $addFields: { memberCount: { $size: '$members' } } },
+      { $sort: { memberCount: -1 } },
+      { $limit: limit },
+    ]);
+    return { success: true, data: groups };
+  }
 }

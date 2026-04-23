@@ -76,5 +76,10 @@ export class ChatController {
   ) {
     return this.chatService.getGroupMessages(id, parseInt(page, 10), parseInt(limit, 10));
   }
+
+  @Get('trending/groups')
+  async getTrendingGroups() {
+    return this.chatService.getTrendingGroups();
+  }
 }
 
