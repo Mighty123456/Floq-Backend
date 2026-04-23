@@ -10,6 +10,7 @@ export class MusicService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
+    console.log('🎵 MusicService Initializing...');
     await this.getSpotifyToken();
   }
 
@@ -17,7 +18,10 @@ export class MusicService implements OnModuleInit {
     const clientId = this.configService.get('SPOTIFY_CLIENT_ID');
     const clientSecret = this.configService.get('SPOTIFY_CLIENT_SECRET');
 
-    if (!clientId || !clientSecret) return;
+    if (!clientId || !clientSecret) {
+      console.warn('⚠️ Spotify Keys missing in .env. Using fallback only.');
+      return;
+    }
 
     try {
       const params = new URLSearchParams();
@@ -32,52 +36,51 @@ export class MusicService implements OnModuleInit {
 
       this.spotifyAccessToken = response.data.access_token;
       this.tokenExpiry = Date.now() + (response.data.expires_in * 1000);
-      console.log('✅ Spotify Access Token acquired');
+      console.log('✅ Spotify Access Token acquired successfully');
     } catch (error) {
       console.error('❌ Spotify Auth Error:', error.response?.data || error.message);
     }
   }
 
   async findAll(query?: string) {
-    // If no query, search for trending or recent hits
-    const searchQuery = query || 'trending 2024';
+    const searchQuery = (query && query.trim().length > 0) ? query : 'trending 2024';
+    console.log(`🔍 Searching for music: "${searchQuery}"`);
 
     // Refresh token if expired
-    if (Date.now() > this.tokenExpiry - 60000) {
+    if (this.spotifyAccessToken && Date.now() > this.tokenExpiry - 60000) {
       await this.getSpotifyToken();
     }
 
     if (this.spotifyAccessToken) {
       try {
         const response = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=20`, {
-          headers: {
-            'Authorization': `Bearer ${this.spotifyAccessToken}`
-          }
+          headers: { 'Authorization': `Bearer ${this.spotifyAccessToken}` }
         });
 
-        return response.data.tracks.items.map(track => ({
-          id: track.id,
-          title: track.name,
-          artist: track.artists.map(a => a.name).join(', '),
-          url: track.preview_url, // 30-second preview (can be null for some tracks)
-          cover: track.album.images[0]?.url,
-          duration: this.formatDuration(track.duration_ms)
-        }));
+        if (response.data.tracks.items.length > 0) {
+          return response.data.tracks.items.map(track => ({
+            id: track.id,
+            title: track.name,
+            artist: track.artists.map(a => a.name).join(', '),
+            url: track.preview_url,
+            cover: track.album.images[0]?.url,
+            duration: this.formatDuration(track.duration_ms)
+          }));
+        }
       } catch (error) {
-        console.error('Spotify Search Error:', error.response?.data || error.message);
-        return this.getFallbackMusic(query);
+        console.error('⚠️ Spotify Search failed, falling back to iTunes:', error.message);
       }
     }
 
-    return this.getFallbackMusic(query);
+    return this.getFallbackMusic(searchQuery);
   }
 
-  private async getFallbackMusic(query?: string) {
-    // Fallback to iTunes API (No key required)
+  private async getFallbackMusic(query: string) {
     try {
-      const searchTerm = query || 'trending';
-      const response = await axios.get(`https://itunes.apple.com/search?term=${encodeURIComponent(searchTerm)}&entity=song&limit=20`);
-      return response.data.results.map(item => ({
+      console.log(`🌐 Calling iTunes fallback for: "${query}"`);
+      const response = await axios.get(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`);
+      
+      const results = response.data.results.map(item => ({
         id: item.trackId.toString(),
         title: item.trackName,
         artist: item.artistName,
@@ -85,7 +88,11 @@ export class MusicService implements OnModuleInit {
         cover: item.artworkUrl100,
         duration: this.formatDuration(item.trackTimeMillis)
       }));
+      
+      console.log(`✅ Found ${results.length} songs via iTunes`);
+      return results;
     } catch (e) {
+      console.error('❌ iTunes fallback failed:', e.message);
       return [];
     }
   }
