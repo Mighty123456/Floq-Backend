@@ -20,7 +20,7 @@ import { ReportsModule } from './modules/reports/reports.module';
   imports: [
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 60,
+      limit: 120,
     }]),
     ConfigModule.forRoot({
       isGlobal: true,

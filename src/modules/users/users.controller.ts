@@ -86,6 +86,19 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Patch('camera-settings')
+  async updateCameraSettings(
+    @Request() req, 
+    @Body() cameraSettings: { alwaysStartOnFrontCamera: boolean; toolbarSide: 'left' | 'right' }
+  ) {
+    const user = await this.usersService.findById(req.user.id);
+    if (!user) throw new NotFoundException('User not found');
+    user.cameraSettings = cameraSettings;
+    await user.save();
+    return { success: true, cameraSettings: user.cameraSettings };
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('block/:id')
   async blockUser(@Request() req, @Param('id') id: string) {
     return this.usersService.blockUser(req.user.id, id);

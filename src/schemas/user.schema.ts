@@ -100,11 +100,23 @@ export class User {
       allowFriendRequests: true,
     },
   })
-  settings: {
+    settings: {
     isDarkTheme: boolean;
     isNotificationsEnabled: boolean;
     showOnlineStatus: boolean;
     allowFriendRequests: boolean;
+  };
+
+  @Prop({
+    type: Object,
+    default: {
+      alwaysStartOnFrontCamera: false,
+      toolbarSide: 'left',
+    },
+  })
+  cameraSettings: {
+    alwaysStartOnFrontCamera: boolean;
+    toolbarSide: 'left' | 'right';
   };
 }
 

@@ -1,10 +1,22 @@
 import { IsString, IsOptional, MaxLength, IsMongoId } from 'class-validator';
 
-export class CreatePostDto {
   @IsString()
   @IsOptional()
   @MaxLength(2200, { message: 'Caption is too long (max 2200 characters)' })
   caption?: string;
+
+  @IsString()
+  @IsOptional()
+  type?: string;
+
+  @IsOptional()
+  audioData?: string; // JSON string from frontend
+
+  @IsOptional()
+  location?: string; // JSON string from frontend
+
+  @IsOptional()
+  metadata?: string; // JSON string from frontend
 }
 
 export class CreateCommentDto {

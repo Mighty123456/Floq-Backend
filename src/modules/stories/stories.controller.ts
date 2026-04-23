@@ -13,12 +13,20 @@ import { Throttle } from '@nestjs/throttler';
 export class StoriesController {
   constructor(private readonly storiesService: StoriesService) {}
 
-  @Throttle({ default: { limit: 30, ttl: 86400000 } }) // 30 per day
+  @Throttle({ default: { limit: 100, ttl: 86400000 } }) // 100 per day
   @Post('upload')
   @UseInterceptors(FileInterceptor('media', multerOptions))
-  async uploadStory(@Request() req, @UploadedFile() file: Express.Multer.File, @Body('caption') caption?: string) {
+  async uploadStory(
+    @Request() req, 
+    @UploadedFile() file: Express.Multer.File, 
+    @Body('caption') caption?: string,
+    @Body('location') locationStr?: string,
+    @Body('metadata') metadataStr?: string,
+  ) {
     if (!file) throw new BadRequestException('Story media file is required');
-    return this.storiesService.createStory(req.user.id, file, caption);
+    const location = locationStr ? JSON.parse(locationStr) : undefined;
+    const metadata = metadataStr ? JSON.parse(metadataStr) : undefined;
+    return this.storiesService.createStory(req.user.id, file, caption, location, metadata);
   }
 
   @Get('me')

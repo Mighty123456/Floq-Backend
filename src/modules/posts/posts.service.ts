@@ -20,13 +20,21 @@ export class PostsService {
     private notificationService: NotificationService,
   ) {}
 
-  async createPost(userId: string, caption: string, files: Express.Multer.File[]) {
+  async createPost(
+    userId: string, 
+    caption: string, 
+    files: Express.Multer.File[], 
+    type: string = 'post',
+    audioData?: { url: string; name: string },
+    location?: { name: string; lat: number; lng: number },
+    metadata?: any
+  ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one media file is required to create a post');
     }
 
-    // Upload files to Cloudinary into a user-specific folder!
-    const folderName = `floq_posts/user_${userId}`;
+    // Upload files to Cloudinary
+    const folderName = `floq_${type}s/user_${userId}`;
     const uploadResults = await this.cloudinaryService.uploadMultipleImages(files, folderName);
     
     const media = uploadResults.map(res => ({
@@ -39,6 +47,11 @@ export class PostsService {
       user: userId,
       caption: caption || '',
       media,
+      type,
+      audioUrl: audioData?.url || null,
+      audioName: audioData?.name || null,
+      location: location || null,
+      metadata: metadata || {},
       hashtags: this.extractHashtags(caption || ''),
     });
 
@@ -50,10 +63,12 @@ export class PostsService {
       await this.postModel.findByIdAndUpdate(savedPost._id, { taggedUsers: taggedUserIds });
     }
 
-    // Increment user's post count
-    await this.userModel.findByIdAndUpdate(userId, {
-      $inc: { postsCount: 1 }
-    });
+    // Only increment post count for standard posts (Stories/Reels might have different stats)
+    if (type === 'post') {
+      await this.userModel.findByIdAndUpdate(userId, {
+        $inc: { postsCount: 1 }
+      });
+    }
 
     return savedPost.populate('user', 'fullName username avatar');
   }

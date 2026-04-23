@@ -21,7 +21,19 @@ export class PostsController {
     @Body() createPostDto: CreatePostDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    return this.postsService.createPost(req.user.id, createPostDto.caption || '', files);
+    const audioData = createPostDto.audioData ? JSON.parse(createPostDto.audioData) : undefined;
+    const location = createPostDto.location ? JSON.parse(createPostDto.location) : undefined;
+    const metadata = createPostDto.metadata ? JSON.parse(createPostDto.metadata) : undefined;
+
+    return this.postsService.createPost(
+      req.user.id, 
+      createPostDto.caption || '', 
+      files,
+      createPostDto.type || 'post',
+      audioData,
+      location,
+      metadata
+    );
   }
 
   @Get('feed')

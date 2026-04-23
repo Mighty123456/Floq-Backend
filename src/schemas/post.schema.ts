@@ -36,6 +36,21 @@ export class Post {
   @Prop({ type: [String], default: [] })
   hashtags: string[];
 
+  @Prop({ type: String, enum: ['post', 'story', 'reel'], default: 'post' })
+  type: string;
+
+  @Prop({ type: String, default: null })
+  audioUrl: string;
+
+  @Prop({ type: String, default: null })
+  audioName: string;
+
+  @Prop({ type: Object, default: null })
+  location: { name: string; lat: number; lng: number };
+
+  @Prop({ type: Object, default: {} })
+  metadata: Record<string, any>; // For Polls, Prompts, etc.
+
   @Prop({ default: true })
   isActive: boolean;
 

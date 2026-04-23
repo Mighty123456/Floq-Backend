@@ -23,6 +23,12 @@ export class Story {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   viewers: Types.ObjectId[];
 
+  @Prop({ type: Object, default: null })
+  location: { name: string; lat: number; lng: number };
+
+  @Prop({ type: Object, default: {} })
+  metadata: Record<string, any>;
+
   // Field for TTL index (24 hours in seconds)
   @Prop({ default: Date.now, expires: 86400 })
   expiresAt: Date;

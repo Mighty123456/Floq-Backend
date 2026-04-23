@@ -16,7 +16,13 @@ export class StoriesService {
     private connectionsService: ConnectionsService,
   ) {}
 
-  async createStory(userId: string, file: Express.Multer.File, caption: string = '') {
+  async createStory(
+    userId: string, 
+    file: Express.Multer.File, 
+    caption: string = '',
+    location?: { name: string; lat: number; lng: number },
+    metadata?: any
+  ) {
     const result = await this.cloudinaryService.uploadImage(file, `floq_stories/user_${userId}`);
     
     const newStory = new this.storyModel({
@@ -26,6 +32,8 @@ export class StoriesService {
         publicId: result.public_id,
       },
       caption,
+      location: location || null,
+      metadata: metadata || {},
       type: file.mimetype.startsWith('video') ? 'video' : 'image',
     });
 
