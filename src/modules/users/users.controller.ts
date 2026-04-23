@@ -22,7 +22,7 @@ export class UsersController {
   @Get('check-username/:username')
   async checkUsername(@Param('username') username: string) {
     const available = await this.usersService.isUsernameAvailable(username);
-    return { success: true, available };
+    return { available };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -38,7 +38,7 @@ export class UsersController {
       await user.save();
     }
 
-    return { success: true };
+    return { };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -54,8 +54,7 @@ export class UsersController {
   @Get('profile/:id')
   async getPublicProfile(@Request() req, @Param('id') id: string) {
     const targetId = id === 'me' ? req.user.id : id;
-    const profile = await this.usersService.findPublicProfile(targetId, req.user.id);
-    return { success: true, data: profile };
+    return this.usersService.findPublicProfile(targetId, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)

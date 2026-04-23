@@ -16,8 +16,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    const result = await this.authService.register(registerDto);
-    return { success: true, data: result };
+    return this.authService.register(registerDto);
   }
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -25,8 +24,7 @@ export class AuthController {
   @Post('login')
   async login(@Request() req, @Body() loginDto: LoginDto) {
     // loginDto is mainly for documentation/validation here since LocalAuthGuard handles logic
-    const result = await this.authService.login(req.user);
-    return { success: true, data: result };
+    return this.authService.login(req.user);
   }
 
   @Post('refresh-token')
@@ -37,11 +35,10 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('verify-otp')
   async verifyOTP(@Body() verifyOtpDto: VerifyOtpDto) {
-    const result = await this.authService.verifyOTP(
+    return this.authService.verifyOTP(
       { email: verifyOtpDto.email, phoneNumber: verifyOtpDto.phoneNumber }, 
       verifyOtpDto.otp
     );
-    return { success: true, data: result };
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -75,18 +72,16 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login-otp')
   async loginViaOTP(@Body() verifyOtpDto: VerifyOtpDto) {
-    const result = await this.authService.loginViaOTP(
+    return this.authService.loginViaOTP(
       { email: verifyOtpDto.email, phoneNumber: verifyOtpDto.phoneNumber }, 
       verifyOtpDto.otp
     );
-    return { success: true, data: result };
   }
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('google')
   async googleSignIn(@Body('idToken') idToken: string) {
-    const result = await this.authService.googleSignIn(idToken);
-    return { success: true, data: result };
+    return this.authService.googleSignIn(idToken);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -103,7 +98,7 @@ export class AuthController {
     const sanitized = user.toObject();
     delete sanitized.password;
     delete sanitized.refreshTokens;
-    return { success: true, data: sanitized };
+    return sanitized;
   }
 
   @UseGuards(JwtAuthGuard)
