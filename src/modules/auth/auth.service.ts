@@ -186,15 +186,24 @@ export class AuthService {
         fullName: name,
         email,
         googleId,
-        avatar: picture,
+        avatar: { url: picture, publicId: 'google' },
         isEmailVerified: true, // Google already verified the email
         password: crypto.randomBytes(32).toString('hex'), // random password, not used
       });
-    } else if (!user.googleId) {
-      // Link Google to existing account
-      user.googleId = googleId;
+    } else {
+      // Link Google to existing account if not linked
+      let updated = false;
+      if (!user.googleId) {
+        user.googleId = googleId;
+        updated = true;
+      }
+      // Update avatar if missing
+      if (!user.avatar?.url && picture) {
+        user.avatar = { url: picture, publicId: 'google' };
+        updated = true;
+      }
       user.isEmailVerified = true;
-      await user.save();
+      if (updated) await user.save();
     }
 
     return this.login(user);
