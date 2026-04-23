@@ -1,5 +1,7 @@
 import { IsString, IsOptional, MaxLength, IsMongoId } from 'class-validator';
 
+export class CreatePostDto {
+
   @IsString()
   @IsOptional()
   @MaxLength(2200, { message: 'Caption is too long (max 2200 characters)' })

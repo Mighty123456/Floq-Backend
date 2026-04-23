@@ -586,6 +586,42 @@ export class PostsService {
     };
   }
 
+  async getReels(requesterId: string, page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    // Block filters
+    const requester = await this.userModel.findById(requesterId).select('blockedUsers');
+    const blockedByOthers = await this.userModel.find({ blockedUsers: new Types.ObjectId(requesterId) }).select('_id');
+    const excludeIds = [...(requester?.blockedUsers || []), ...blockedByOthers.map(u => u._id)];
+
+    const query = {
+      user: { $nin: excludeIds },
+      isActive: true,
+      type: 'reel'
+    };
+
+    const [reels, total] = await Promise.all([
+      this.postModel
+        .find(query as any)
+        .sort({ likesCount: -1, createdAt: -1 }) // Discovery: trending first
+        .skip(skip)
+        .limit(limit)
+        .populate('user', 'fullName username avatar')
+        .lean()
+        .exec(),
+      this.postModel.countDocuments(query as any)
+    ]);
+
+    return { 
+      success: true, 
+      data: reels.map(post => ({
+        ...post,
+        isLiked: post.likes ? post.likes.some(id => id.toString() === requesterId) : false,
+      })),
+      meta: { total, page, lastPage: Math.ceil(total / limit) }
+    };
+  }
+
   private extractHashtags(text: string): string[] {
     const hashtagRegex = /#(\w+)/g;
     const matches = text.match(hashtagRegex);

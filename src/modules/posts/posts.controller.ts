@@ -83,6 +83,11 @@ export class PostsController {
     return this.postsService.getUserPosts(id, parseInt(page, 10), parseInt(limit, 10));
   }
 
+  @Get('reels')
+  async getReels(@Request() req, @Query('page') page: string = '1') {
+    return this.postsService.getReels(req.user.id, parseInt(page, 10));
+  }
+
   @Delete(':id')
   async deletePost(@Request() req, @Param('id') id: string) {
     return this.postsService.deletePost(id, req.user.id);
