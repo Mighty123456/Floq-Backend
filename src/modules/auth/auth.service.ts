@@ -23,6 +23,18 @@ export class AuthService {
     return null;
   }
 
+  // Required by LocalStrategy for passport-local email/password auth
+  async validateUser(email: string, password: string): Promise<any> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) return null;
+    if (!user.password) return null; // Google-only accounts have no password
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return null;
+
+    return user;
+  }
+
   async login(user: any) {
     const payload = { sub: user._id, role: user.role };
     const accessToken = this.jwtService.sign(payload);
