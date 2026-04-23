@@ -9,10 +9,6 @@ export class MusicController {
 
   @Get('trending')
   async getTrending(@Query('q') query?: string) {
-    const data = await this.musicService.findAll(query);
-    return {
-      success: true,
-      data: data
-    };
+    return await this.musicService.findAll(query);
   }
 }
