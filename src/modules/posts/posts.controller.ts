@@ -25,7 +25,7 @@ export class PostsController {
     const location = createPostDto.location ? JSON.parse(createPostDto.location) : undefined;
     const metadata = createPostDto.metadata ? JSON.parse(createPostDto.metadata) : undefined;
 
-    return this.postsService.createPost(
+    const result = await this.postsService.createPost(
       req.user.id, 
       createPostDto.caption || '', 
       files,
@@ -34,6 +34,7 @@ export class PostsController {
       location,
       metadata
     );
+    return { success: true, data: result };
   }
 
   @Get('feed')
@@ -58,7 +59,8 @@ export class PostsController {
     @Param('id') id: string,
     @Body() createCommentDto: CreateCommentDto,
   ) {
-    return this.postsService.addComment(id, req.user.id, createCommentDto.text, createCommentDto.parentId);
+    const result = await this.postsService.addComment(id, req.user.id, createCommentDto.text, createCommentDto.parentId);
+    return { success: true, data: result };
   }
 
   @Get(':id/comments')
@@ -99,7 +101,8 @@ export class PostsController {
     @Param('id') id: string,
     @Body() updatePostDto: UpdatePostDto,
   ) {
-    return this.postsService.updatePost(id, req.user.id, updatePostDto.caption);
+    const result = await this.postsService.updatePost(id, req.user.id, updatePostDto.caption);
+    return { success: true, data: result };
   }
 
   @Delete('comments/:id')
@@ -124,7 +127,8 @@ export class PostsController {
 
   @Post(':id/repost')
   async repostPost(@Request() req, @Param('id') id: string, @Body('caption') caption?: string) {
-    return this.postsService.repostPost(id, req.user.id, caption);
+    const result = await this.postsService.repostPost(id, req.user.id, caption);
+    return { success: true, data: result };
   }
 
   @Get('hashtag/:tag')

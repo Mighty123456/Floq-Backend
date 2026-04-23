@@ -54,7 +54,8 @@ export class UsersController {
   @Get('profile/:id')
   async getPublicProfile(@Request() req, @Param('id') id: string) {
     const targetId = id === 'me' ? req.user.id : id;
-    return this.usersService.findPublicProfile(targetId, req.user.id);
+    const profile = await this.usersService.findPublicProfile(targetId, req.user.id);
+    return { success: true, data: profile };
   }
 
   @UseGuards(JwtAuthGuard)
