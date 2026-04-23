@@ -43,4 +43,9 @@ export class ConnectionsController {
     const userId = id === 'me' ? req.user.id : id;
     return this.connectionsService.getFollowing(userId);
   }
+
+  @Get('categories')
+  async getCategories(@Request() req) {
+    return this.connectionsService.getConnectionCategories(req.user.id);
+  }
 }

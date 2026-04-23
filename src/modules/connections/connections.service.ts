@@ -183,4 +183,40 @@ export class ConnectionsService {
     
     return { success: true, data: following.map(f => f.following) };
   }
+
+  async getConnectionCategories(userId: string) {
+    // 1. People you don't follow back
+    // Find who follows me
+    const myFollowers = await this.followerModel.find({ following: new Types.ObjectId(userId), status: 'accepted' });
+    const followerIds = myFollowers.map(f => f.follower);
+
+    // Find who I follow
+    const iFollow = await this.followerModel.find({ follower: new Types.ObjectId(userId), status: 'accepted' });
+    const followingIds = iFollow.map(f => f.following);
+
+    // IDs of people who follow me but I don't follow back
+    const dontFollowBackIds = followerIds.filter(id => !followingIds.some(fid => fid.equals(id)));
+    
+    const dontFollowBackUsers = await this.userModel
+      .find({ _id: { $in: dontFollowBackIds } })
+      .select('fullName username avatar')
+      .limit(50)
+      .exec();
+
+    // 2. New Followers (Latest 20)
+    const newFollowersData = await this.followerModel
+      .find({ following: new Types.ObjectId(userId), status: 'accepted' })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .populate('follower', 'fullName username avatar')
+      .exec();
+
+    return {
+      success: true,
+      data: {
+        dontFollowBack: dontFollowBackUsers,
+        newFollowers: newFollowersData.map(f => f.follower),
+      }
+    };
+  }
 }
