@@ -17,6 +17,7 @@ import { StoriesModule } from './modules/stories/stories.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
 import { MusicModule } from './modules/music/music.module';
+import { EffectsModule } from './modules/effects/effects.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { MusicModule } from './modules/music/music.module';
     StoriesModule,
     ReportsModule,
     MusicModule,
+    EffectsModule,
   ],
   controllers: [AppController],
   providers: [
