@@ -252,7 +252,10 @@ export class AuthService {
   }
 
   private sanitizeUser(user: any) {
-    const { password, refreshTokens, ...sanitized } = user;
+    // Must call toObject() first — spreading a Mongoose Document directly
+    // only copies wrapper properties, not the actual DB fields (fullName, avatar, etc.)
+    const plain = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+    const { password, refreshTokens, __v, ...sanitized } = plain;
     return sanitized;
   }
 }
