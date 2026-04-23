@@ -190,6 +190,12 @@ export class AuthService {
         isEmailVerified: true, // Google already verified the email
         password: crypto.randomBytes(32).toString('hex'), // random password, not used
       });
+      // Send welcome email
+      try {
+        await this.mailService.sendWelcomeEmail(email, name);
+      } catch (e) {
+        console.error('Failed to send welcome email:', e);
+      }
     } else {
       // Link Google to existing account if not linked
       let updated = false;

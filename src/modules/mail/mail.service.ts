@@ -121,6 +121,21 @@ export class MailService {
     return this.sendMail(email, '⚡ Your Floq login code', html);
   }
 
+  async sendWelcomeEmail(email: string, name: string) {
+    const html = this.layout(`
+      <h1 style="color:#FFFFFF;margin:0 0 16px;font-size:24px;font-weight:800;text-align:center;">Welcome to Floq! 🌈</h1>
+      <p style="color:#9CA3AF;font-size:16px;line-height:1.6;margin:0;text-align:center;">
+        Hi <strong>${name}</strong>, your account has been successfully created via Google.
+      </p>
+      <div style="margin:32px 0;text-align:center;">
+        <p style="color:#FFFFFF;font-size:18px;">We're excited to have you in the community!</p>
+      </div>
+      <p style="color:#6B7280;font-size:13px;text-align:center;">Start exploring your feed and connecting with friends.</p>
+    `);
+
+    return this.sendMail(email, '🌈 Welcome to Floq!', html);
+  }
+
   private async sendMail(to: string, subject: string, html: string) {
     try {
       await this.transporter.sendMail({
