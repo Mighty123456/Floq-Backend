@@ -99,6 +99,12 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Patch('toggle-privacy')
+  async togglePrivacy(@Request() req) {
+    return this.usersService.togglePrivacy(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('block/:id')
   async blockUser(@Request() req, @Param('id') id: string) {
     return this.usersService.blockUser(req.user.id, id);
@@ -114,6 +120,24 @@ export class UsersController {
   @Get('blocked-list')
   async getBlockedList(@Request() req) {
     return this.usersService.getBlockedList(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('close-friends')
+  async getCloseFriends(@Request() req) {
+    return this.usersService.getCloseFriends(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('close-friends/:id')
+  async addToCloseFriends(@Request() req, @Param('id') id: string) {
+    return this.usersService.addToCloseFriends(req.user.id, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('close-friends/:id')
+  async removeFromCloseFriends(@Request() req, @Param('id') id: string) {
+    return this.usersService.removeFromCloseFriends(req.user.id, id);
   }
 
   @UseGuards(JwtAuthGuard)

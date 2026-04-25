@@ -161,4 +161,14 @@ export class PostsController {
   ) {
     return this.postsService.searchPosts(query || '', req.user.id, parseInt(page, 10), parseInt(limit, 10));
   }
+
+  @Post(':id/view')
+  async incrementViews(@Request() req, @Param('id') id: string) {
+    return this.postsService.incrementViews(id, req.user.id);
+  }
+
+  @Get(':id/analytics')
+  async getPostAnalytics(@Request() req, @Param('id') id: string) {
+    return this.postsService.getPostAnalytics(id, req.user.id);
+  }
 }

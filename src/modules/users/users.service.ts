@@ -209,6 +209,40 @@ export class UsersService {
     return { success: true, data: user.blockedUsers };
   }
 
+  async togglePrivacy(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    
+    user.isPrivate = !user.isPrivate;
+    await user.save();
+    
+    return { success: true, isPrivate: user.isPrivate };
+  }
+
+  async getCloseFriends(userId: string) {
+    const user = await this.userModel.findById(userId).populate('closeFriends', 'fullName username avatar');
+    if (!user) throw new NotFoundException('User not found');
+    return { success: true, data: user.closeFriends };
+  }
+
+  async addToCloseFriends(userId: string, targetId: string) {
+    if (userId === targetId) throw new BadRequestException('You cannot add yourself to close friends');
+    const target = await this.userModel.findById(targetId);
+    if (!target) throw new NotFoundException('User to add not found');
+
+    await this.userModel.findByIdAndUpdate(userId, {
+      $addToSet: { closeFriends: new Types.ObjectId(targetId) }
+    });
+    return { success: true, message: 'Added to close friends' };
+  }
+
+  async removeFromCloseFriends(userId: string, targetId: string) {
+    await this.userModel.findByIdAndUpdate(userId, {
+      $pull: { closeFriends: new Types.ObjectId(targetId) }
+    });
+    return { success: true, message: 'Removed from close friends' };
+  }
+
   async deactivateAccount(userId: string) {
     const user = await this.userModel.findByIdAndUpdate(userId, { 
       isActive: false, 

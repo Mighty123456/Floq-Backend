@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Notification, NotificationDocument } from '../../schemas/notification.schema';
+import { User, UserDocument } from '../../schemas/user.schema';
 import * as admin from 'firebase-admin';
 
 import { NotificationGateway } from './notifications.gateway';
@@ -10,6 +11,7 @@ import { NotificationGateway } from './notifications.gateway';
 export class NotificationService implements OnModuleInit {
   constructor(
     @InjectModel(Notification.name) private notificationModel: Model<NotificationDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly notificationGateway: NotificationGateway,
   ) {}
 
@@ -43,8 +45,33 @@ export class NotificationService implements OnModuleInit {
     const saved = await notification.save();
     const populated = await saved.populate('sender', 'fullName username avatar');
     
-    // Emit via WebSocket for real-time in-app delivery
+    // 1. Emit via WebSocket for real-time in-app delivery
     this.notificationGateway.emitNotification(data.recipient, populated);
+
+    // 2. Send Push Notification via FCM
+    try {
+      const recipientUser = await this.userModel.findById(data.recipient).select('fcmTokens settings');
+      if (recipientUser && recipientUser.fcmTokens?.length > 0 && recipientUser.settings?.isNotificationsEnabled) {
+        const title = 'Floq';
+        let body = '';
+        
+        switch (data.type) {
+          case 'like': body = `${populated.sender['username']} liked your post`; break;
+          case 'comment': body = `${populated.sender['username']} commented on your post`; break;
+          case 'follow': body = `${populated.sender['username']} started following you`; break;
+          case 'repost': body = `${populated.sender['username']} reposted your post`; break;
+          default: body = data.content || 'New notification';
+        }
+
+        await this.sendToDevices(recipientUser.fcmTokens, title, body, {
+          type: data.type,
+          postId: data.post?.toString() || '',
+          senderId: data.sender.toString(),
+        });
+      }
+    } catch (error) {
+      console.error('Push notification error:', error);
+    }
 
     return populated;
   }

@@ -66,7 +66,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('sendMessage')
-  async handleMessage(client: Socket, payload: { receiverId?: string, groupId?: string, content: string, type?: string, media?: any }) {
+  async handleMessage(client: Socket, payload: { receiverId?: string, groupId?: string, content: string, type?: string, media?: any, disappearingIn?: number }) {
     const senderId = client.data.userId;
     if (!senderId) return;
 
@@ -87,6 +87,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const receiverSocketId = payload.receiverId ? this.userSockets.get(payload.receiverId) : null;
     const isActuallyDelivered = !!receiverSocketId;
 
+    // Handle disappearing messages
+    let expiresAt: Date | undefined;
+    if (payload.disappearingIn) {
+      expiresAt = new Date(Date.now() + payload.disappearingIn * 1000);
+    }
+
     // Save message to database
     const message = await this.chatService.saveMessage(
       senderId, 
@@ -95,7 +101,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       payload.type || 'text',
       payload.media,
       payload.groupId,
-      isActuallyDelivered // New parameter
+      isActuallyDelivered,
+      expiresAt
     );
 
     // Populate sender data for the receiver
@@ -121,6 +128,84 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('messageSent', populatedMessage);
 
     return populatedMessage;
+  }
+
+  @SubscribeMessage('reactMessage')
+  async handleReactMessage(client: Socket, payload: { messageId: string, emoji: string, isRemoving?: boolean, receiverId?: string, groupId?: string }) {
+    const userId = client.data.userId;
+    if (!userId) return;
+
+    try {
+      const updated = payload.isRemoving 
+        ? await this.chatService.removeReaction(payload.messageId, userId, payload.emoji)
+        : await this.chatService.addReaction(payload.messageId, userId, payload.emoji);
+      
+      if (!updated) throw new Error('Message not found');
+      
+      const reactionData = { messageId: payload.messageId, reactions: updated.reactions };
+
+      if (payload.groupId) {
+        this.server.to(payload.groupId).emit('messageReaction', reactionData);
+      } else if (payload.receiverId) {
+        const receiverSocketId = this.userSockets.get(payload.receiverId);
+        if (receiverSocketId) {
+          this.server.to(receiverSocketId).emit('messageReaction', reactionData);
+        }
+      }
+      client.emit('messageReaction', reactionData);
+    } catch (e) {
+      client.emit('error', { message: e.message });
+    }
+  }
+
+  // --- WEBRTC SIGNALING ---
+
+  @SubscribeMessage('callUser')
+  handleCallUser(client: Socket, payload: { toUserId: string, offer: any, type: 'audio' | 'video' }) {
+    const fromUserId = client.data.userId;
+    const receiverSocketId = this.userSockets.get(payload.toUserId);
+    if (receiverSocketId) {
+      this.server.to(receiverSocketId).emit('incomingCall', { 
+        fromUserId, 
+        offer: payload.offer, 
+        type: payload.type 
+      });
+    } else {
+      client.emit('callError', { message: 'User is offline' });
+    }
+  }
+
+  @SubscribeMessage('answerCall')
+  handleAnswerCall(client: Socket, payload: { toUserId: string, answer: any }) {
+    const fromUserId = client.data.userId;
+    const receiverSocketId = this.userSockets.get(payload.toUserId);
+    if (receiverSocketId) {
+      this.server.to(receiverSocketId).emit('callAnswered', { 
+        fromUserId, 
+        answer: payload.answer 
+      });
+    }
+  }
+
+  @SubscribeMessage('iceCandidate')
+  handleIceCandidate(client: Socket, payload: { toUserId: string, candidate: any }) {
+    const fromUserId = client.data.userId;
+    const receiverSocketId = this.userSockets.get(payload.toUserId);
+    if (receiverSocketId) {
+      this.server.to(receiverSocketId).emit('newIceCandidate', { 
+        fromUserId, 
+        candidate: payload.candidate 
+      });
+    }
+  }
+
+  @SubscribeMessage('endCall')
+  handleEndCall(client: Socket, payload: { toUserId: string }) {
+    const fromUserId = client.data.userId;
+    const receiverSocketId = this.userSockets.get(payload.toUserId);
+    if (receiverSocketId) {
+      this.server.to(receiverSocketId).emit('callEnded', { fromUserId });
+    }
   }
 
   @SubscribeMessage('deleteMessage')

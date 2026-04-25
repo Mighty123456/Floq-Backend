@@ -39,6 +39,18 @@ export class Message {
 
   @Prop()
   editedAt?: Date;
+
+  @Prop({
+    type: [{
+      user: { type: Types.ObjectId, ref: 'User' },
+      emoji: String,
+    }],
+    default: []
+  })
+  reactions: { user: Types.ObjectId; emoji: string }[];
+
+  @Prop({ type: Date, default: null })
+  expiresAt?: Date;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
@@ -46,3 +58,4 @@ export const MessageSchema = SchemaFactory.createForClass(Message);
 // Index for fast conversation retrieval
 MessageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
 MessageSchema.index({ receiver: 1, sender: 1, createdAt: -1 });
+MessageSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

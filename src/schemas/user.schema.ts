@@ -27,6 +27,9 @@ export class User {
   @Prop({ unique: true, sparse: true })
   googleId?: string;
 
+  @Prop({ unique: true, sparse: true })
+  appleId?: string;
+
   @Prop({ default: 'user', enum: ['user', 'admin', 'moderator'] })
   role: string;
 
@@ -68,6 +71,9 @@ export class User {
 
   @Prop({ type: [{ type: 'ObjectId', ref: 'User' }], default: [] })
   spammedUsers: Types.ObjectId[];
+
+  @Prop({ type: [{ type: 'ObjectId', ref: 'User' }], default: [] })
+  closeFriends: Types.ObjectId[];
 
 
   @Prop({ default: false })

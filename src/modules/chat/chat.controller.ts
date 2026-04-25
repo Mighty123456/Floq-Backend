@@ -81,5 +81,15 @@ export class ChatController {
   async getTrendingGroups() {
     return this.chatService.getTrendingGroups();
   }
+
+  @Post('share-post')
+  async sharePost(
+    @Request() req,
+    @Body('postId') postId: string,
+    @Body('receiverId') receiverId?: string,
+    @Body('groupId') groupId?: string,
+  ) {
+    return this.chatService.sharePost(req.user.id, postId, receiverId, groupId);
+  }
 }
 

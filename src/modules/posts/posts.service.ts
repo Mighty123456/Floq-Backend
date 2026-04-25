@@ -630,6 +630,41 @@ export class PostsService {
     };
   }
 
+  async incrementViews(postId: string, userId: string) {
+    const userIdObj = new Types.ObjectId(userId);
+    
+    // Add to unique views if not already there, and increment total count
+    await this.postModel.findByIdAndUpdate(postId, {
+      $addToSet: { uniqueViews: userIdObj },
+      $inc: { viewsCount: 1 }
+    });
+    
+    return { success: true };
+  }
+
+  async getPostAnalytics(postId: string, userId: string) {
+    const post = await this.postModel.findById(postId);
+    if (!post) throw new NotFoundException('Post not found');
+
+    if (post.user.toString() !== userId) {
+      throw new ForbiddenException('You can only view analytics for your own posts');
+    }
+
+    return {
+      success: true,
+      data: {
+        views: post.viewsCount,
+        reach: post.uniqueViews?.length || 0,
+        likes: post.likesCount,
+        comments: post.commentsCount,
+        reposts: post.repostsCount,
+        engagementRate: post.uniqueViews?.length > 0 
+          ? ((post.likesCount + post.commentsCount + post.repostsCount) / post.uniqueViews.length * 100).toFixed(2)
+          : 0
+      }
+    };
+  }
+
   private extractHashtags(text: string): string[] {
     const hashtagRegex = /#(\w+)/g;
     const matches = text.match(hashtagRegex);

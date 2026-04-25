@@ -21,6 +21,12 @@ export class Post {
   @Prop({ default: 0 })
   commentsCount: number;
 
+  @Prop({ default: 0 })
+  viewsCount: number;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  uniqueViews: Types.ObjectId[];
+
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   likes: Types.ObjectId[];
 

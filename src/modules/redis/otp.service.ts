@@ -104,4 +104,16 @@ export class OtpService implements OnModuleInit {
     const ttl = await this.redisClient.ttl(this.otpKey(purpose, email));
     return ttl > 0 ? ttl : 0;
   }
+
+  async saveValue(key: string, value: string, ttl: number): Promise<void> {
+    await this.redisClient.setEx(key, ttl, value);
+  }
+
+  async getValue(key: string): Promise<string | null> {
+    return this.redisClient.get(key);
+  }
+
+  async deleteValue(key: string): Promise<void> {
+    await this.redisClient.del(key);
+  }
 }

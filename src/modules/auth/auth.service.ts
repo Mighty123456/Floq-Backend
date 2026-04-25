@@ -7,6 +7,7 @@ import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { UserDocument } from '../../schemas/user.schema';
 import { OAuth2Client } from 'google-auth-library';
+import appleSignin from 'apple-signin-auth';
 
 @Injectable()
 export class AuthService {
@@ -50,7 +51,13 @@ export class AuthService {
         if (!dbUser.isEmailVerified && !dbUser.isPhoneVerified) {
              const identifier = dbUser.email || dbUser.phoneNumber;
              const { otp } = await this.otpService.createOTP('verify', identifier!);
-             if (dbUser.email) await this.mailService.sendVerificationOTP(dbUser.email, dbUser.fullName, otp);
+             if (dbUser.email) {
+               await this.mailService.sendVerificationOTP(dbUser.email, dbUser.fullName, otp);
+               const token = crypto.randomBytes(32).toString('hex');
+               await this.otpService.saveValue(`verify_link:${token}`, dbUser.email, 3600);
+               const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+               await this.mailService.sendVerificationLink(dbUser.email, dbUser.fullName, verificationUrl);
+             }
              // TODO: Add SmsService.sendOTP(dbUser.phoneNumber, otp)
              throw new ForbiddenException({ 
                message: 'Account not verified', 
@@ -84,8 +91,13 @@ export class AuthService {
     const identifier = user.email || user.phoneNumber;
     const { otp } = await this.otpService.createOTP('verify', identifier!);
     
-    if (user.email) await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
-    // TODO: Add SmsService.sendOTP(user.phoneNumber, otp)
+    if (user.email) {
+      await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
+      const token = crypto.randomBytes(32).toString('hex');
+      await this.otpService.saveValue(`verify_link:${token}`, user.email, 3600);
+      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+      await this.mailService.sendVerificationLink(user.email, user.fullName, verificationUrl);
+    }
 
     return {
         message: 'Registration successful. Verification code sent.',
@@ -225,6 +237,74 @@ export class AuthService {
     }
 
     return this.login(user);
+  }
+
+  async appleSignIn(idToken: string, firstName?: string, lastName?: string) {
+    let applePayload: any;
+    try {
+      applePayload = await appleSignin.verifyIdToken(idToken, {
+        audience: process.env.APPLE_CLIENT_ID, // Service ID
+      });
+    } catch (e) {
+      throw new UnauthorizedException('Invalid Apple token');
+    }
+
+    const { email, sub: appleId } = applePayload;
+    if (!email) throw new BadRequestException('Apple account has no email');
+
+    let user = await this.usersService.findByEmail(email);
+    const fullName = firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || 'Apple User');
+
+    if (!user) {
+      user = await this.usersService.create({
+        fullName,
+        email,
+        appleId,
+        isEmailVerified: true,
+        password: crypto.randomBytes(32).toString('hex'),
+      });
+      try {
+        await this.mailService.sendWelcomeEmail(email, fullName);
+      } catch (e) {
+        console.error('Failed to send welcome email:', e);
+      }
+    } else {
+      if (!user.appleId) {
+        user.appleId = appleId;
+        user.isEmailVerified = true;
+        await user.save();
+      }
+    }
+
+    return this.login(user);
+  }
+
+  async sendVerificationLink(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.isEmailVerified) throw new BadRequestException('Email already verified');
+
+    const token = crypto.randomBytes(32).toString('hex');
+    await this.otpService.saveValue(`verify_link:${token}`, email, 3600); // 1 hour
+
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+    await this.mailService.sendVerificationLink(email, user.fullName, verificationUrl);
+
+    return { message: 'Verification link sent' };
+  }
+
+  async verifyEmailLink(token: string) {
+    const email = await this.otpService.getValue(`verify_link:${token}`);
+    if (!email) throw new BadRequestException('Invalid or expired verification token');
+
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    user.isEmailVerified = true;
+    await user.save();
+    await this.otpService.deleteValue(`verify_link:${token}`);
+
+    return { success: true, message: 'Email verified successfully' };
   }
 
   async refreshTokens(refreshToken: string) {

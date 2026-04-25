@@ -29,8 +29,20 @@ export class Story {
   @Prop({ type: Object, default: {} })
   metadata: Record<string, any>;
 
-  // Field for TTL index (24 hours in seconds)
-  @Prop({ default: Date.now, expires: 86400 })
+  @Prop({ default: false })
+  isCloseFriendsOnly: boolean;
+
+  @Prop({
+    type: [{
+      user: { type: Types.ObjectId, ref: 'User' },
+      emoji: String,
+      createdAt: { type: Date, default: Date.now }
+    }],
+    default: []
+  })
+  reactions: { user: Types.ObjectId; emoji: string; createdAt: Date }[];
+
+  @Prop({ default: Date.now })
   expiresAt: Date;
 }
 

@@ -13,7 +13,7 @@ export class ChatService {
     @InjectModel(Group.name) private groupModel: Model<GroupDocument>,
   ) {}
 
-  async saveMessage(senderId: string, receiverId?: string, content: string = '', type: string = 'text', media?: any, groupId?: string, isDelivered: boolean = false) {
+  async saveMessage(senderId: string, receiverId?: string, content: string = '', type: string = 'text', media?: any, groupId?: string, isDelivered: boolean = false, expiresAt?: Date) {
     const message = new this.messageModel({
       sender: new Types.ObjectId(senderId),
       receiver: receiverId ? new Types.ObjectId(receiverId) : undefined,
@@ -23,8 +23,25 @@ export class ChatService {
       media,
       isDelivered,
       deliveredAt: isDelivered ? new Date() : undefined,
+      expiresAt: expiresAt || null,
     });
     return message.save();
+  }
+
+  async addReaction(messageId: string, userId: string, emoji: string) {
+    return this.messageModel.findByIdAndUpdate(
+      messageId,
+      { $addToSet: { reactions: { user: new Types.ObjectId(userId), emoji } } },
+      { new: true }
+    ).populate('reactions.user', 'fullName username avatar');
+  }
+
+  async removeReaction(messageId: string, userId: string, emoji: string) {
+    return this.messageModel.findByIdAndUpdate(
+      messageId,
+      { $pull: { reactions: { user: new Types.ObjectId(userId), emoji } } },
+      { new: true }
+    ).populate('reactions.user', 'fullName username avatar');
   }
 
   async markAsDelivered(receiverId: string) {
@@ -360,5 +377,16 @@ export class ChatService {
       { $limit: limit },
     ]);
     return { success: true, data: groups };
+  }
+
+  async sharePost(senderId: string, postId: string, receiverId?: string, groupId?: string) {
+    return this.saveMessage(
+      senderId,
+      receiverId,
+      `Shared a post: ${postId}`, // Placeholder text, usually handled by client-side parsing of 'post' type
+      'post',
+      { postId }, // Metadata
+      groupId
+    );
   }
 }

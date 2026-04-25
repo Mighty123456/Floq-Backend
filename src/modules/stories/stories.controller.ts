@@ -22,11 +22,31 @@ export class StoriesController {
     @Body('caption') caption?: string,
     @Body('location') locationStr?: string,
     @Body('metadata') metadataStr?: string,
+    @Body('isCloseFriendsOnly') isCloseFriendsOnly: string = 'false',
   ) {
     if (!file) throw new BadRequestException('Story media file is required');
     const location = locationStr ? JSON.parse(locationStr) : undefined;
     const metadata = metadataStr ? JSON.parse(metadataStr) : undefined;
-    return this.storiesService.createStory(req.user.id, file, caption, location, metadata);
+    const isCloseFriend = isCloseFriendsOnly === 'true';
+    return this.storiesService.createStory(req.user.id, file, caption, location, metadata, isCloseFriend);
+  }
+
+  @Post(':id/react')
+  async reactToStory(
+    @Request() req,
+    @Param('id') id: string,
+    @Body('emoji') emoji: string,
+  ) {
+    return this.storiesService.reactToStory(id, req.user.id, emoji);
+  }
+
+  @Post(':id/reply')
+  async replyToStory(
+    @Request() req,
+    @Param('id') id: string,
+    @Body('content') content: string,
+  ) {
+    return this.storiesService.replyToStory(id, req.user.id, content);
   }
 
   @Get('me')

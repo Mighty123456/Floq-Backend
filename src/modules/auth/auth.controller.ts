@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, NotFoundException, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard, JwtAuthGuard } from '../../common/guards/auth.guard';
 import { UsersService } from '../users/users.service';
@@ -82,6 +82,26 @@ export class AuthController {
   @Post('google')
   async googleSignIn(@Body('idToken') idToken: string) {
     return this.authService.googleSignIn(idToken);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('apple')
+  async appleSignIn(
+    @Body('idToken') idToken: string,
+    @Body('firstName') firstName?: string,
+    @Body('lastName') lastName?: string,
+  ) {
+    return this.authService.appleSignIn(idToken, firstName, lastName);
+  }
+
+  @Post('send-verification-link')
+  async sendVerificationLink(@Body('email') email: string) {
+    return this.authService.sendVerificationLink(email);
+  }
+
+  @Get('verify-email')
+  async verifyEmailLink(@Query('token') token: string) {
+    return this.authService.verifyEmailLink(token);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -43,6 +43,7 @@
     "@types/passport-local": "^1.0.38",
     "@types/sharp": "^0.31.1",
     "@types/uuid": "^10.0.0",
+    "apple-signin-auth": "^2.0.0",
     "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",

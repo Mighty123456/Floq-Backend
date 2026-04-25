@@ -7,6 +7,8 @@ import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { ConnectionsService } from '../connections/connections.service';
 import 'multer';
 
+import { ChatService } from '../chat/chat.service';
+
 @Injectable()
 export class StoriesService {
   constructor(
@@ -14,6 +16,7 @@ export class StoriesService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private cloudinaryService: CloudinaryService,
     private connectionsService: ConnectionsService,
+    private chatService: ChatService,
   ) {}
 
   async createStory(
@@ -21,7 +24,8 @@ export class StoriesService {
     file: Express.Multer.File, 
     caption: string = '',
     location?: { name: string; lat: number; lng: number },
-    metadata?: any
+    metadata?: any,
+    isCloseFriendsOnly: boolean = false,
   ) {
     const result = await this.cloudinaryService.uploadImage(file, `floq_stories/user_${userId}`);
     
@@ -35,6 +39,7 @@ export class StoriesService {
       location: location || null,
       metadata: metadata || {},
       type: file.mimetype.startsWith('video') ? 'video' : 'image',
+      isCloseFriendsOnly,
     });
 
     return (await newStory.save()).populate('user', 'fullName username avatar');
@@ -49,37 +54,41 @@ export class StoriesService {
 
   async getFeedStories(userId: string) {
     const followingIds = await this.connectionsService.getFollowingIds(userId);
-    
-    // Get block lists
-    const requester = await this.userModel.findById(userId).select('blockedUsers');
+    const requester = await this.userModel.findById(userId).select('blockedUsers closeFriends');
     if (!requester) throw new NotFoundException('User not found');
-    
+
     const blockedByOthers = await this.userModel.find({ blockedUsers: new Types.ObjectId(userId) }).select('_id');
     const excludeIds = [...(requester.blockedUsers || []), ...blockedByOthers.map(u => u._id)];
-
-    // Filter followingIds to remove blocked people
     const filteredFollowingIds = followingIds.filter(id => !excludeIds.some(ex => ex.toString() === id.toString()));
 
     const allRelevantIds = [...filteredFollowingIds, new Types.ObjectId(userId)];
 
-    // Fetch all stories from the last 24h for these users
-    // Added safety filter in case TTL hasn't run yet
+    // Fetch stories from last 24h
     const stories = await this.storyModel
       .find({
         user: { $in: allRelevantIds },
         isActive: true,
-        expiresAt: { $gt: new Date() } // Safety filter
+        createdAt: { $gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }
       })
       .sort({ createdAt: -1 })
-      .populate('user', 'fullName username avatar')
-      .lean() // Use lean for performance since we're grouping manually
+      .populate('user', 'fullName username avatar closeFriends')
+      .lean()
       .exec();
 
-    // Group stories by user (standard social media format)
+    // Group stories by user and filter close friends stories
     const groupedStories = new Map();
 
     stories.forEach((story: any) => {
-      const uId = story.user['_id'].toString();
+      const owner = story.user;
+      const uId = owner['_id'].toString();
+      
+      // If close friends only, check if requester is in owner's close friends
+      if (story.isCloseFriendsOnly && uId !== userId) {
+        const ownerCloseFriends = owner.closeFriends || [];
+        const isCloseFriend = ownerCloseFriends.some((cfId: any) => cfId.toString() === userId);
+        if (!isCloseFriend) return; // Skip if not a close friend
+      }
+
       if (!groupedStories.has(uId)) {
         groupedStories.set(uId, {
           user: story.user,
@@ -87,16 +96,33 @@ export class StoriesService {
         });
       }
       
-      // Inject hasSeen status for the requester
       const hasSeen = story.viewers ? story.viewers.some((vId: any) => vId.toString() === userId) : false;
-      
-      groupedStories.get(uId).stories.push({
-        ...story,
-        hasSeen
-      });
+      groupedStories.get(uId).stories.push({ ...story, hasSeen });
     });
 
     return Array.from(groupedStories.values());
+  }
+
+  async reactToStory(storyId: string, userId: string, emoji: string) {
+    return this.storyModel.findByIdAndUpdate(
+      storyId,
+      { $push: { reactions: { user: new Types.ObjectId(userId), emoji, createdAt: new Date() } } },
+      { new: true },
+    );
+  }
+
+  async replyToStory(storyId: string, userId: string, content: string) {
+    const story = await this.storyModel.findById(storyId).populate('user');
+    if (!story) throw new NotFoundException('Story not found');
+
+    const ownerId = story.user.toString();
+    return this.chatService.saveMessage(
+      userId,
+      ownerId,
+      content,
+      'text',
+      { storyId, type: 'story_reply' }
+    );
   }
 
   async markAsSeen(storyId: string, userId: string) {
