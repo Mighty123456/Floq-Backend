@@ -75,6 +75,18 @@ export class EffectsService {
     { id: 'heart', name: 'Heart', type: 'icon', value: 'favorite', category: 'shapes' },
     { id: 'star', name: 'Star', type: 'icon', value: 'star', category: 'shapes' },
     { id: 'music', name: 'Vibe', type: 'icon', value: 'music_note', category: 'art' },
+    { id: 'fire', name: 'Hot', type: 'icon', value: 'local_fire_department', category: 'art' },
+    { id: 'bolt', name: 'Electric', type: 'icon', value: 'bolt', category: 'shapes' },
+    { id: 'party', name: 'Celebrate', type: 'icon', value: 'celebration', category: 'art' },
+    { id: 'smile', name: 'Smile', type: 'icon', value: 'emoji_emotions', category: 'art' },
+    { id: 'place', name: 'Location', type: 'icon', value: 'location_on', category: 'shapes' },
+    { id: 'verified', name: 'Verified', type: 'icon', value: 'check_circle', category: 'shapes' },
+    { id: 'camera', name: 'Shot', type: 'icon', value: 'camera_alt', category: 'art' },
+    { id: 'crown', name: 'King', type: 'icon', value: 'auto_awesome', category: 'art' },
+    // Image Stickers (URLs)
+    { id: 'cool_cat', name: 'Cool Cat', type: 'image', value: 'https://img.icons8.com/color/96/cat--v1.png', category: 'art' },
+    { id: 'sunglasses', name: 'Shades', type: 'image', value: 'https://img.icons8.com/color/96/sunglasses.png', category: 'art' },
+    { id: 'rocket', name: 'Rocket', type: 'image', value: 'https://img.icons8.com/color/96/rocket.png', category: 'art' },
   ];
 
   getFilters() {
