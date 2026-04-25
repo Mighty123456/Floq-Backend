@@ -78,11 +78,13 @@ export class PostsController {
 
   @Get('user/:id')
   async getUserPosts(
+    @Request() req,
     @Param('id') id: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '20',
   ) {
-    return this.postsService.getUserPosts(id, parseInt(page, 10), parseInt(limit, 10));
+    const targetId = id === 'me' ? req.user.id : id;
+    return this.postsService.getUserPosts(targetId, parseInt(page, 10), parseInt(limit, 10));
   }
 
   @Get('reels')
@@ -110,8 +112,9 @@ export class PostsController {
   }
 
   @Get('tagged/:id')
-  async getTaggedPosts(@Param('id') id: string) {
-    return this.postsService.getTaggedPosts(id);
+  async getTaggedPosts(@Request() req, @Param('id') id: string) {
+    const targetId = id === 'me' ? req.user.id : id;
+    return this.postsService.getTaggedPosts(targetId);
   }
 
   @Post(':id/save')
