@@ -24,6 +24,7 @@ export class PostsController {
     const audioData = createPostDto.audioData ? JSON.parse(createPostDto.audioData) : undefined;
     const location = createPostDto.location ? JSON.parse(createPostDto.location) : undefined;
     const metadata = createPostDto.metadata ? JSON.parse(createPostDto.metadata) : undefined;
+    const taggedUsers = createPostDto.taggedUsers ? JSON.parse(createPostDto.taggedUsers) : undefined;
 
     return this.postsService.createPost(
       req.user.id, 
@@ -32,7 +33,8 @@ export class PostsController {
       createPostDto.type || 'post',
       audioData,
       location,
-      metadata
+      metadata,
+      taggedUsers
     );
   }
 

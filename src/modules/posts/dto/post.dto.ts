@@ -19,6 +19,9 @@ export class CreatePostDto {
 
   @IsOptional()
   metadata?: string; // JSON string from frontend
+
+  @IsOptional()
+  taggedUsers?: string; // JSON string of user IDs
 }
 
 export class CreateCommentDto {

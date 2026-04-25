@@ -27,7 +27,8 @@ export class PostsService {
     type: string = 'post',
     audioData?: { url: string; name: string },
     location?: { name: string; lat: number; lng: number },
-    metadata?: any
+    metadata?: any,
+    taggedUsers?: string[]
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one media file is required to create a post');
@@ -58,9 +59,16 @@ export class PostsService {
     const savedPost = await newPost.save();
 
     // Handle Tags/Mentions
-    const taggedUserIds = await this.handleMentions(caption, userId, savedPost._id.toString(), 'post');
-    if (taggedUserIds.length > 0) {
-      await this.postModel.findByIdAndUpdate(savedPost._id, { taggedUsers: taggedUserIds });
+    const mentionedUserIds = await this.handleMentions(caption, userId, savedPost._id.toString(), 'post');
+    
+    // Merge mentioned users and explicitly tagged users
+    const allTaggedUserIds = [...new Set([
+      ...mentionedUserIds.map(id => id.toString()), 
+      ...(taggedUsers || [])
+    ])].map(id => new Types.ObjectId(id));
+
+    if (allTaggedUserIds.length > 0) {
+      await this.postModel.findByIdAndUpdate(savedPost._id, { taggedUsers: allTaggedUserIds });
     }
 
     // Only increment post count for standard posts (Stories/Reels might have different stats)
