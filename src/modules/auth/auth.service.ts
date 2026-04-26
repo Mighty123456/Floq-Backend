@@ -164,13 +164,25 @@ export class AuthService {
 
   async requestLoginOTP(email?: string, phoneNumber?: string) {
     const user = await this.findUserByIdentifier(email, phoneNumber);
-    if (!user) throw new NotFoundException('User not found');
-
-    const identifier = user.email || user.phoneNumber;
-    const { otp } = await this.otpService.createOTP('login_otp', identifier!);
     
-    if (user.email) await this.mailService.sendLoginOTP(user.email, user.fullName, otp);
-    // TODO: Add SmsService.sendOTP(user.phoneNumber, otp)
+    // If it's email and not found, we throw. For phone, we allow auto-registration.
+    if (!user && email) throw new NotFoundException('User not found');
+
+    const identifier = email || phoneNumber;
+    if (!identifier) throw new BadRequestException('No identifier provided');
+
+    const { otp } = await this.otpService.createOTP('login_otp', identifier);
+    
+    if (email && user) {
+      await this.mailService.sendLoginOTP(user.email, user.fullName, otp);
+    }
+    
+    // For phone numbers, we log it for now. In production, this would use an SMS provider.
+    if (phoneNumber) {
+      const name = user ? user.fullName : 'New User';
+      console.log(`[AUTH] Sending Login OTP to ${phoneNumber} (${name}): ${otp}`);
+      // TODO: Add SmsService.sendOTP(phoneNumber, otp)
+    }
 
     return { message: 'Login code sent' };
   }
@@ -180,8 +192,23 @@ export class AuthService {
     if (!id) throw new BadRequestException('No identifier provided');
 
     await this.otpService.verifyOTP('login_otp', id, otp);
-    const user = await this.findUserByIdentifier(identifier.email, identifier.phoneNumber);
-    if (!user) throw new NotFoundException('User not found');
+    let user = await this.findUserByIdentifier(identifier.email, identifier.phoneNumber);
+    
+    if (!user) {
+      // Auto-register for phone numbers
+      if (identifier.phoneNumber) {
+        const username = `user_${Math.random().toString(36).substring(2, 8)}`;
+        user = await this.usersService.create({
+          phoneNumber: identifier.phoneNumber,
+          fullName: `User ${identifier.phoneNumber.slice(-4)}`,
+          username,
+          isPhoneVerified: true,
+          isActive: true,
+        });
+      } else {
+        throw new NotFoundException('User not found');
+      }
+    }
 
     return this.login(user);
   }
