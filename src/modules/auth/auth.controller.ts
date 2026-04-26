@@ -97,15 +97,6 @@ export class AuthController {
     return this.authService.appleSignIn(idToken, firstName, lastName);
   }
 
-  @Post('send-verification-link')
-  async sendVerificationLink(@Body('email') email: string) {
-    return this.authService.sendVerificationLink(email);
-  }
-
-  @Get('verify-email')
-  async verifyEmailLink(@Query('token') token: string) {
-    return this.authService.verifyEmailLink(token);
-  }
 
   @UseGuards(JwtAuthGuard)
   @Post('change-password')

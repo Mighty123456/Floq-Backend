@@ -53,10 +53,6 @@ export class AuthService {
              const { otp } = await this.otpService.createOTP('verify', identifier!);
              if (dbUser.email) {
                await this.mailService.sendVerificationOTP(dbUser.email, dbUser.fullName, otp);
-               const token = crypto.randomBytes(32).toString('hex');
-               await this.otpService.saveValue(`verify_link:${token}`, dbUser.email, 3600);
-               const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
-               await this.mailService.sendVerificationLink(dbUser.email, dbUser.fullName, verificationUrl);
              }
              // TODO: Add SmsService.sendOTP(dbUser.phoneNumber, otp)
              throw new ForbiddenException({ 
@@ -91,12 +87,12 @@ export class AuthService {
     const identifier = user.email || user.phoneNumber;
     const { otp } = await this.otpService.createOTP('verify', identifier!);
     
+    // DEV LOG: Log OTP to console for easy access during development
+    console.log(`[AUTH][DEV] Verification OTP for ${identifier}: ${otp}`);
+    
     if (user.email) {
       await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
-      const token = crypto.randomBytes(32).toString('hex');
-      await this.otpService.saveValue(`verify_link:${token}`, user.email, 3600);
-      const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
-      await this.mailService.sendVerificationLink(user.email, user.fullName, verificationUrl);
+      // Link verification removed as requested
     }
 
     return {
@@ -128,6 +124,9 @@ export class AuthService {
 
     const identifier = user.email || user.phoneNumber;
     const { otp } = await this.otpService.createOTP('verify', identifier!);
+    
+    // DEV LOG: Log OTP to console for easy access during development
+    console.log(`[AUTH][DEV] Verification OTP (Resend) for ${identifier}: ${otp}`);
     
     if (user.email) await this.mailService.sendVerificationOTP(user.email, user.fullName, otp);
     // TODO: Add SmsService.sendOTP(user.phoneNumber, otp)
@@ -324,33 +323,6 @@ export class AuthService {
     return this.login(user);
   }
 
-  async sendVerificationLink(email: string) {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) throw new NotFoundException('User not found');
-    if (user.isEmailVerified) throw new BadRequestException('Email already verified');
-
-    const token = crypto.randomBytes(32).toString('hex');
-    await this.otpService.saveValue(`verify_link:${token}`, email, 3600); // 1 hour
-
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
-    await this.mailService.sendVerificationLink(email, user.fullName, verificationUrl);
-
-    return { message: 'Verification link sent' };
-  }
-
-  async verifyEmailLink(token: string) {
-    const email = await this.otpService.getValue(`verify_link:${token}`);
-    if (!email) throw new BadRequestException('Invalid or expired verification token');
-
-    const user = await this.usersService.findByEmail(email);
-    if (!user) throw new NotFoundException('User not found');
-
-    user.isEmailVerified = true;
-    await user.save();
-    await this.otpService.deleteValue(`verify_link:${token}`);
-
-    return { success: true, message: 'Email verified successfully' };
-  }
 
   async refreshTokens(refreshToken: string) {
     try {

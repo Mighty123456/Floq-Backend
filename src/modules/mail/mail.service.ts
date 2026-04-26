@@ -96,29 +96,6 @@ export class MailService {
     return this.sendMail(email, '📬 Verify your Floq account', html);
   }
 
-  async sendVerificationLink(email: string, name: string, url: string) {
-    const html = this.layout(`
-      <h1 style="color:#FFFFFF;margin:0 0 16px;font-size:24px;font-weight:800;text-align:center;">Verify Your Email ✉️</h1>
-      <p style="color:#9CA3AF;font-size:16px;line-height:1.6;margin:0;text-align:center;">
-        Hi <strong>${name}</strong>, click the button below to verify your email address.
-      </p>
-      <div style="margin:32px 0;text-align:center;">
-        <a href="${url}" style="
-          display:inline-block;padding:16px 32px;
-          background:#3B82F6;color:#FFFFFF;
-          border-radius:12px;font-weight:700;text-decoration:none;
-          box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-        ">Verify Email Address</a>
-      </div>
-      <p style="color:#6B7280;font-size:13px;text-align:center;">This link will expire in 1 hour.</p>
-      <p style="color:#6B7280;font-size:12px;text-align:center;margin-top:16px;">
-        If the button doesn't work, copy and paste this URL: <br/>
-        <span style="color:#3B82F6;">${url}</span>
-      </p>
-    `);
-
-    return this.sendMail(email, '✉️ Verify your Floq email address', html);
-  }
 
   async sendPasswordResetOTP(email: string, name: string, otp: string) {
     const html = this.layout(`
