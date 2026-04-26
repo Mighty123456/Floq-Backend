@@ -8,6 +8,7 @@ import * as crypto from 'crypto';
 import { UserDocument } from '../../schemas/user.schema';
 import { OAuth2Client } from 'google-auth-library';
 import appleSignin from 'apple-signin-auth';
+import * as admin from 'firebase-admin';
 
 @Injectable()
 export class AuthService {
@@ -228,6 +229,39 @@ export class AuthService {
 
     // Step 3: Issue JWT tokens
     return this.login(user);
+  }
+
+  async firebasePhoneSignIn(idToken: string) {
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const phoneNumber = decodedToken.phone_number;
+
+      if (!phoneNumber) {
+        throw new BadRequestException('Token does not contain a phone number');
+      }
+
+      let user = await this.usersService.findByPhoneNumber(phoneNumber);
+
+      if (!user) {
+        // Create new user for this phone number
+        const username = `user_${Math.random().toString(36).substring(2, 8)}`;
+        user = await this.usersService.create({
+          phoneNumber,
+          fullName: `User ${phoneNumber.slice(-4)}`,
+          username,
+          isPhoneVerified: true,
+          isActive: true,
+        });
+      } else if (!user.isPhoneVerified) {
+        user.isPhoneVerified = true;
+        await user.save();
+      }
+
+      return this.login(user);
+    } catch (error) {
+      console.error('Firebase Auth Error:', error);
+      throw new UnauthorizedException('Invalid Firebase token');
+    }
   }
 
   async googleSignIn(idToken: string) {

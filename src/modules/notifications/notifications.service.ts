@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Notification, NotificationDocument } from '../../schemas/notification.schema';
@@ -13,18 +14,28 @@ export class NotificationService implements OnModuleInit {
     @InjectModel(Notification.name) private notificationModel: Model<NotificationDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly notificationGateway: NotificationGateway,
+    private configService: ConfigService,
   ) {}
 
   onModuleInit() {
     try {
       if (admin.apps.length === 0) {
-        admin.initializeApp({
-          credential: admin.credential.applicationDefault(),
-        });
-        console.log('Firebase Admin Initialized');
+        const serviceAccount = this.configService.get('FIREBASE_SERVICE_ACCOUNT_JSON');
+        if (serviceAccount) {
+          const config = typeof serviceAccount === 'string' ? JSON.parse(serviceAccount) : serviceAccount;
+          admin.initializeApp({
+            credential: admin.credential.cert(config),
+          });
+          console.log('✅ Firebase Admin Initialized with Service Account');
+        } else {
+          admin.initializeApp({
+            credential: admin.credential.applicationDefault(),
+          });
+          console.log('⚠️ Firebase Admin Initialized with Application Default');
+        }
       }
     } catch (error) {
-      console.error('Firebase Admin init error:', error);
+      console.error('❌ Firebase Admin init error:', error);
     }
   }
 

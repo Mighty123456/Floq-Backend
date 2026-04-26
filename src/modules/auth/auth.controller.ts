@@ -81,6 +81,11 @@ export class AuthController {
     );
   }
 
+  @Post('firebase-phone')
+  async firebasePhoneSignIn(@Body('idToken') idToken: string) {
+    return this.authService.firebasePhoneSignIn(idToken);
+  }
+
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('google')
   async googleSignIn(@Body('idToken') idToken: string) {
