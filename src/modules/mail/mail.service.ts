@@ -35,11 +35,9 @@ export class MailService {
             <tr>
               <td style="padding:40px 40px 24px;text-align:center;">
                 <div style="display:inline-block;padding:20px;background:rgba(59, 130, 246, 0.05);border-radius:22px;border:1px solid rgba(59, 130, 246, 0.15);position:relative;">
-                  <!-- Styled Logo Icon -->
-                  <div style="width:80px;height:80px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow: 0 10px 20px rgba(59,130,246,0.3);overflow:hidden;">
-                    <img src="cid:floq_logo" alt="Floq Logo" style="width:100%;height:100%;object-fit:cover;display:block;" />
-                  </div>
-                  <div style="margin-top:16px;font-size:22px;font-weight:900;color:#FFFFFF;letter-spacing:-0.5px;text-transform:uppercase;">FLOQ</div>
+                  <!-- CSS-based Logo (No attachments) -->
+                  <div style="width:80px;height:80px;border-radius:24px;background:linear-gradient(135deg, #3B82F6, #2563EB);display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow: 0 12px 24px rgba(59,130,246,0.4);font-size:42px;font-weight:900;color:#FFFFFF;">F</div>
+                  <div style="margin-top:20px;font-size:24px;font-weight:900;color:#FFFFFF;letter-spacing:1px;text-transform:uppercase;">FLOQ</div>
                 </div>
               </td>
             </tr>
@@ -93,7 +91,7 @@ export class MailService {
       <p style="color:#6B7280;font-size:13px;text-align:center;">Valid for 10 minutes.</p>
     `);
 
-    return this.sendMail(email, '📬 Verify your Floq account', html);
+    return this.sendMail(email, `🔢 Your Floq Verification Code: ${otp}`, html);
   }
 
 
@@ -144,13 +142,6 @@ export class MailService {
         to,
         subject,
         html,
-        attachments: [
-          {
-            filename: 'icon.png',
-            path: path.join(process.cwd(), 'assets', 'icon.png'),
-            cid: 'floq_logo',
-          },
-        ],
       });
     } catch (error) {
       console.error('Email Error:', error);
