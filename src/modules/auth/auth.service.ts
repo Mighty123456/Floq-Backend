@@ -171,45 +171,63 @@ export class AuthService {
     const identifier = email || phoneNumber;
     if (!identifier) throw new BadRequestException('No identifier provided');
 
-    const { otp } = await this.otpService.createOTP('login_otp', identifier);
+    const { otp, expiresInSeconds } = await this.otpService.createOTP('login_otp', identifier);
     
     if (email && user) {
       await this.mailService.sendLoginOTP(user.email, user.fullName, otp);
+      return { message: 'Login code sent to your email' };
     }
     
-    // For phone numbers, we log it for now. In production, this would use an SMS provider.
+    // For phone numbers: log OTP and return it in dev mode (replace with SmsService in production)
     if (phoneNumber) {
       const name = user ? user.fullName : 'New User';
-      console.log(`[AUTH] Sending Login OTP to ${phoneNumber} (${name}): ${otp}`);
-      // TODO: Add SmsService.sendOTP(phoneNumber, otp)
+      console.log(`[AUTH][DEV] OTP for ${phoneNumber} (${name}): ${otp} | Expires in ${expiresInSeconds}s`);
+      // TODO: Replace with real SMS provider (Twilio, MSG91, etc.)
+      // await this.smsService.sendOTP(phoneNumber, otp);
+      
+      // DEV MODE: return OTP directly since no SMS provider is configured
+      return { 
+        message: 'Login code sent',
+        devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined,
+      };
     }
 
     return { message: 'Login code sent' };
   }
 
+
   async loginViaOTP(identifier: { email?: string; phoneNumber?: string }, otp: string) {
     const id = identifier.email || identifier.phoneNumber;
     if (!id) throw new BadRequestException('No identifier provided');
 
+    // Step 1: Verify OTP against Redis
     await this.otpService.verifyOTP('login_otp', id, otp);
+
     let user = await this.findUserByIdentifier(identifier.email, identifier.phoneNumber);
-    
+
     if (!user) {
-      // Auto-register for phone numbers
+      // Step 2a: NEW USER — phone not in DB yet → CREATE document in MongoDB
       if (identifier.phoneNumber) {
         const username = `user_${Math.random().toString(36).substring(2, 8)}`;
         user = await this.usersService.create({
-          phoneNumber: identifier.phoneNumber,
+          phoneNumber: identifier.phoneNumber,  // ← saved to MongoDB
           fullName: `User ${identifier.phoneNumber.slice(-4)}`,
           username,
-          isPhoneVerified: true,
+          isPhoneVerified: true,                // ← verified immediately
           isActive: true,
         });
       } else {
         throw new NotFoundException('User not found');
       }
+    } else {
+      // Step 2b: EXISTING USER — mark phone as verified if not already
+      if (identifier.phoneNumber && !user.isPhoneVerified) {
+        user.isPhoneVerified = true;            // ← updates existing MongoDB document
+        await user.save();
+      }
     }
 
+    // Step 3: Issue JWT tokens
     return this.login(user);
   }
 

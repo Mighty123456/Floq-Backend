@@ -65,7 +65,10 @@ export class AuthController {
 
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('request-login-otp')
-  async requestLoginOTP(@Body('email') email: string, @Body('phoneNumber') phoneNumber?: string) {
+  async requestLoginOTP(
+    @Body('email') email?: string, 
+    @Body('phoneNumber') phoneNumber?: string,
+  ) {
     return this.authService.requestLoginOTP(email, phoneNumber);
   }
 
